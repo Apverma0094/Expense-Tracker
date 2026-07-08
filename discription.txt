@@ -1,0 +1,878 @@
+EXPANCE TRACKER PROJECT DESCRIPTION
+===================================
+
+1. Project Overview
+-------------------
+Expance Tracker is a full-stack personal finance management web application. It helps a user manage daily income, expenses, wallets, categories, budgets, reminders, dashboard summaries, and financial analytics from one authenticated web interface.
+
+The project is built as a server-rendered Node.js application using Express.js, EJS templates, MongoDB, and a Bootstrap-based admin UI. It is designed for single-user-session flows where each authenticated user can manage their own financial records separately.
+
+The application focuses on these main goals:
+- Track income and expense transactions.
+- Organize transactions by wallet and category.
+- Manage multiple wallets such as bank, cash, and digital wallets.
+- Create category-based and overall budgets.
+- Monitor spending against budgets.
+- Show dashboard summaries and analytics.
+- Manage reminders for EMI, bills, borrowed money, lent money, and tasks.
+- Support OTP-based email login.
+- Store user preferences and notification settings.
+
+
+2. Technology Stack
+-------------------
+
+Backend:
+- Node.js
+- Express.js
+- CommonJS modules
+- MongoDB native driver
+- express-session for session management
+- connect-mongo for storing sessions in MongoDB
+- connect-flash for success and error messages
+- dotenv for environment variables
+- nodemailer for OTP email delivery
+
+Frontend:
+- EJS template engine
+- Bootstrap CSS and JS
+- Template assets inside public/assets
+- Tabler icons, Remix icons, Feather icons, Font Awesome, Bootstrap icons
+- ApexCharts for charts and visual analytics
+- Select2 and other UI plugins included in public assets
+
+Database:
+- MongoDB
+- Database name used by config/db.js: expanceTracker
+- Main collections include users, transactions, wallets, walletTransfers, categories, budgets, reminders, otps, emailLeads, and sessions.
+
+Development Tools:
+- nodemon for development server reloads
+- npm scripts:
+  - npm start: runs node server.js
+  - npm run dev: runs nodemon server.js
+
+
+2A. Unique Technologies, Services, and Special Features
+------------------------------------------------------
+This project is not only a basic income-expense CRUD application. It includes several unique and useful technical/service-level features that make it more complete as a personal finance system.
+
+Passwordless OTP Login:
+- The project uses email OTP authentication instead of a normal password login.
+- OTPs are generated, stored, verified, expired, and blocked after too many failed attempts.
+- This makes login simpler for users because they do not need to remember a password.
+- Nodemailer is used as the email delivery service for sending OTP codes.
+
+MongoDB-backed Session Storage:
+- User sessions are not stored only in server memory.
+- connect-mongo stores sessions in MongoDB.
+- This is useful for persistence and is better than default in-memory sessions for a real application.
+
+Automatic Expense Creation from Reminders:
+- EMI and bill reminders can be marked as paid.
+- When marked paid, the application automatically creates an expense transaction.
+- This connects the reminder module directly with the transaction module.
+- It reduces duplicate user work because the user does not need to manually add the same bill as an expense again.
+
+Recurring Reminder Scheduling:
+- EMI/Bill reminders support repeat cycles such as monthly, quarterly, and yearly.
+- When a repeating reminder is marked paid, the reminder is moved to the next due date instead of being permanently closed.
+- This is useful for real recurring financial obligations.
+
+Wallet Transfer-aware Balance System:
+- Wallet balances are not calculated only from transactions.
+- The app considers opening balance, income, expenses, incoming transfers, and outgoing transfers.
+- This makes wallet balances more realistic when users move money between cash, bank, and digital wallets.
+
+Category and Wallet Reference Synchronization:
+- If a category is renamed, related transaction records can be updated with the new category name.
+- If a wallet is renamed, related transaction and wallet transfer references can be updated.
+- This avoids broken historical records after renaming important master data.
+
+Budget Intelligence:
+- The budget module supports overall budgets and category-level budgets.
+- It calculates used percentage, remaining amount, over-budget amount, and alert status.
+- It can use monthly budgets, custom date ranges, and fallback monthly budget preferences from settings.
+
+Dashboard-level Financial Intelligence:
+- The dashboard combines transactions, wallets, budgets, reminders, settings, and categories into one summary.
+- It shows savings rate, current month income/expense, budget progress, reminder alerts, upcoming tasks, wallet balances, and spending breakdowns.
+- This makes the dashboard more like a financial control center instead of a simple stats page.
+
+Header Reminder Notifications:
+- Reminder alerts are loaded globally and shown in the header.
+- The notification count is based on due-today and overdue reminders.
+- User notification preferences control whether bill reminders are enabled.
+
+Bill Image Attachment Support:
+- Transactions can include bill image data.
+- The app validates file type and approximate file size.
+- Supported image types include JPG, PNG, WEBP, and GIF.
+
+Starter Category Seeding:
+- The category module automatically creates useful starter income and expense categories for new users.
+- This improves first-time user experience because the user can start adding transactions quickly.
+
+Finance-focused Modular Architecture:
+- The project uses separate route, controller, collection, utility, and view layers.
+- This structure keeps finance logic organized and makes the project easier to extend.
+- Important domain logic such as budgets, reminders, category visuals, wallet balances, and OTP authentication is separated into reusable helper modules.
+
+
+3. Project Structure
+--------------------
+
+Root files:
+- server.js: Main Express application entry point.
+- package.json: Project metadata, scripts, and dependencies.
+- package-lock.json: Locked dependency versions.
+- discription.txt: Detailed project documentation file.
+
+config:
+- config/db.js: MongoDB connection helper. It connects to local MongoDB at mongodb://127.0.0.1:27017 and uses the expanceTracker database.
+
+controllers:
+- controllers/authController.js: Login, OTP verification, dashboard, and logout logic.
+- controllers/transactionController.js: Transaction list, filters, add, update, delete, and bill image validation.
+- controllers/analyticsController.js: Analytics page calculations and chart data.
+- controllers/walletController.js: Wallet CRUD, wallet balances, wallet transfers, and wallet validation.
+- controllers/categoriesController.js: Category CRUD, starter category seeding, and usage protection.
+- controllers/budgetController.js: Budget summary, budget history, category budgets, alerts, and budget saving.
+- controllers/remindersController.js: EMI, bill, borrowed, lent, and task reminder management.
+- controllers/settingsController.js: User profile, preferences, and notification settings.
+
+collections:
+- collections/users.js: User creation, lookup, profile settings, default settings, and profile display data.
+- collections/transactions.js: Transaction CRUD and rename-reference helpers for category/wallet changes.
+- collections/wallets.js: Wallet CRUD, filtering, and transaction aggregation stats.
+- collections/walletTransfers.js: Wallet transfer records and transfer aggregation stats.
+- collections/categories.js: Category CRUD, filtering, normalization, and usage checks.
+- collections/budgets.js: Budget period normalization, lookup, list, and upsert logic.
+- collections/reminders.js: Reminder CRUD, category normalization, priority normalization, and repeat type normalization.
+- collections/otps.js: OTP storage, lookup, verification, blocking, and attempt tracking.
+- collections/emailLeads.js: Tracks OTP email leads and verification status.
+- collections/session.js: Stores login session history and logout status.
+
+routes:
+- routes/authRoutes.js: /, /dashboard, /logout
+- routes/transactionRoutes.js: /transactions
+- routes/analyticsRoutes.js: /analytics
+- routes/walletRoutes.js: /wallet
+- routes/categoriesRoutes.js: /categories
+- routes/budgetRoutes.js: /budget
+- routes/remindersRoutes.js: /reminders
+- routes/settingsRoutes.js: /settings
+
+middleware:
+- middleware/auth.js: Protects authenticated routes and prevents logged-in users from accessing the login page.
+- middleware/cacheControl.js: Applies cache-control behavior.
+
+utils:
+- utils/generateOTP.js: Generates OTP codes and expiry metadata.
+- utils/emailService.js: Sends OTP email.
+- utils/categoryPresentation.js: Category icon and display helpers.
+- utils/budgetPresentation.js: Budget period labels, expense grouping, status, and history helpers.
+- utils/reminderPresentation.js: Reminder summary and alert presentation helpers.
+
+views:
+- views/auth/login.ejs: OTP login page.
+- views/dashboard.ejs: Main financial dashboard.
+- views/transactions/transaction.ejs: Transaction management page.
+- views/analytics/analytics.ejs: Charts and yearly analytics.
+- views/wallet/wallet.ejs: Wallet and transfer management.
+- views/categories/categories.ejs: Category management.
+- views/budget/budget.ejs: Budget planner, category budget planner, alerts, trend, and history.
+- views/reminders/reminders.ejs: Reminder tabs, calendar, cards, and forms.
+- views/profile/settings.ejs: User profile and settings.
+- views/partials/header.ejs: Top navigation and notifications.
+- views/partials/sidebar.ejs: Sidebar navigation.
+- views/partials/footer.ejs: Shared scripts and footer markup.
+- views/partials/flash.ejs: Flash success/error display.
+
+public:
+- public/assets: CSS, JS, images, plugins, fonts, and admin theme assets.
+
+
+4. Application Startup Flow
+---------------------------
+The application starts from server.js.
+
+Startup steps:
+1. Load environment variables using dotenv.
+2. Create an Express app.
+3. Set EJS as the view engine.
+4. Enable URL-encoded form parsing with a 10MB limit.
+5. Serve static files from the public folder.
+6. Configure express-session.
+7. Store sessions in MongoDB using connect-mongo.
+8. Enable flash messages.
+9. Load current user details and reminder notifications into res.locals.
+10. Apply cache-control middleware.
+11. Mount all route modules.
+12. Connect to MongoDB.
+13. Start the HTTP server on PORT or 3000.
+
+Important note:
+- config/db.js currently connects directly to mongodb://127.0.0.1:27017 and uses database expanceTracker.
+- Session storage uses process.env.MONGO_URI through connect-mongo.
+- For consistent deployment, both should point to the same MongoDB environment.
+
+
+5. Authentication System
+------------------------
+The application uses email OTP login instead of password login.
+
+Authentication features:
+- User enters email on the login page.
+- Email is normalized to lowercase.
+- Email format is validated.
+- OTP is generated using utils/generateOTP.js.
+- OTP is saved in the otps collection.
+- OTP email is sent using utils/emailService.js and nodemailer.
+- The email is also saved/updated in emailLeads collection.
+- Active OTP protection prevents repeated OTP spam.
+- OTP verification requires a 6-digit numeric code.
+- Invalid attempts are counted.
+- OTP is blocked after too many failed attempts.
+- Expired OTPs are rejected.
+- On success, the user is found or created in users collection.
+- OTP is marked as verified.
+- Email lead is marked as verified.
+- A fresh session is created.
+- Session details are stored in session history.
+- User is redirected to dashboard.
+
+Logout:
+- Logout updates session history.
+- Express session is destroyed.
+- Session cookie is cleared.
+- User is redirected to login.
+
+
+6. Dashboard Module
+-------------------
+The dashboard is the main summary page after login.
+
+Dashboard data sources:
+- Transactions
+- Categories
+- Wallets
+- Wallet transfers
+- Reminders
+- Budgets
+- User settings
+
+Dashboard calculations:
+- Total income
+- Total expense
+- Current balance
+- Savings rate
+- Current month income
+- Current month expense
+- Budget target
+- Budget used percent
+- Budget remaining amount
+- Last six months overview
+- Category expense breakdown
+- Wallet balance summaries
+- Reminder summary
+- Reminder alerts
+- Upcoming task list
+- Budget alerts
+
+Dashboard budget logic:
+- Finds active monthly or custom budgets.
+- Gives priority to active custom budgets where applicable.
+- Falls back to user monthly budget settings if no active budget is found.
+- Derives a useful fallback target from average expense/current month values if needed.
+- Shows budget risk when usage is high or spending is over limit.
+
+Dashboard reminder logic:
+- Counts due today and overdue reminders.
+- Shows reminder alerts in the header and dashboard.
+- Shows upcoming task cards.
+
+
+7. Transaction Module
+---------------------
+Transactions are the core records for income and expenses.
+
+Main features:
+- Add income transactions.
+- Add expense transactions.
+- Edit transactions.
+- Delete transactions.
+- Filter by type, category, wallet, and search text.
+- Show total income, total expense, and balance.
+- Attach bill image data to a transaction.
+- Validate category and wallet before saving.
+- Ensure selected category type matches transaction type.
+
+Transaction fields:
+- userId
+- title
+- category
+- wallet
+- type: income or expense
+- amount
+- description
+- transactionDate
+- billImageData
+- billImageName
+- billImageMime
+- createdAt
+- updatedAt
+
+Bill image validation:
+- Supports JPG, JPEG, PNG, WEBP, and GIF.
+- Requires base64 data URI.
+- Maximum approximate size is 5MB.
+
+Reference safety:
+- If a category is renamed, related transaction category names can be updated.
+- If a wallet is renamed, related transaction wallet names can be updated.
+
+
+8. Wallet Module
+----------------
+Wallets represent places where money is stored or spent from.
+
+Supported wallet types:
+- bank
+- cash
+- digital
+
+Main features:
+- Add wallet.
+- Edit wallet.
+- Delete wallet.
+- Filter wallets by type, currency, or search.
+- Set opening balance and opening date.
+- Track wallet notes.
+- Transfer money between wallets.
+- Prevent transfers between the same wallet.
+- Prevent transfer if source wallet has insufficient balance.
+- Prevent deleting wallets that are already used by transactions or transfers.
+
+Wallet balance formula:
+Wallet balance = opening balance + income + incoming transfers - expense - outgoing transfers
+
+Wallet transfer fields:
+- userId
+- fromWallet
+- toWallet
+- amount
+- transferDate
+- note
+- createdAt
+- updatedAt
+
+Wallet UI model includes:
+- Icon class
+- Badge class
+- Type label
+- Transaction count
+- Transfer count
+- Total income
+- Total expense
+- Incoming transfers
+- Outgoing transfers
+- Current balance
+- Last activity date
+
+
+9. Category Module
+------------------
+Categories organize income and expenses.
+
+Supported category types:
+- income
+- expense
+
+Main features:
+- Add category.
+- Edit category.
+- Delete category.
+- Filter by type or search.
+- Display icons and visual labels.
+- Show usage count.
+- Prevent deleting categories that are already used by transactions.
+- Rename transaction references when a category name changes.
+
+Starter categories:
+The app automatically ensures useful starter categories exist for each user.
+
+Income starter categories:
+- Salary
+- Freelance
+- Bonus
+- Investment Returns
+- Gift Received
+
+Expense starter categories:
+- Food & Dining
+- Travel
+- Shopping
+- Bills
+- Rent
+- Health
+- Entertainment
+- Education
+- Transport
+- Utilities
+
+
+10. Budget Module
+-----------------
+The Budget Planner helps the user track spending against planned limits.
+
+Supported budget periods:
+- Monthly budget
+- Custom date range budget
+
+Main features:
+- Overall budget limit support at data/controller level.
+- Monthly budget fallback from user settings.
+- Category budget planner.
+- Add/edit category budget limits.
+- Delete category budget limits.
+- Budget period summary cards.
+- Budget snapshot.
+- Budget alerts.
+- Budget vs Expense Trend chart.
+- Budget history table.
+- Spending progress calculation.
+- Remaining amount calculation.
+- Over-budget amount calculation.
+
+Budget fields:
+- userId
+- periodType: monthly or custom
+- monthKey
+- startDate
+- endDate
+- overallLimit
+- notes
+- categoryBudgets
+- createdAt
+- updatedAt
+
+Category budget fields:
+- category
+- limit
+
+Budget status logic:
+- Calculates total spent for the selected period.
+- Calculates used percentage.
+- Calculates remaining amount.
+- Marks categories as On Track, At Risk, Near Limit, Over, or Over Budget depending on usage.
+- Shows alerts when a category is over budget or reaches high usage.
+
+Recent UI updates:
+- The visible top Set Budget button was removed.
+- The visible period/month/start/end/apply filter toolbar was removed.
+- Category Budget Planner was moved above Budget vs Expense Trend.
+- Budget vs Expense Trend was moved lower on the page.
+
+
+11. Analytics Module
+--------------------
+Analytics provides yearly and monthly financial insight.
+
+Main features:
+- Select analytics year.
+- Monthly income, expense, and balance overview.
+- Category-wise expense breakdown.
+- Monthly transaction count chart.
+- Wallet balance overview.
+- Recent transactions list.
+- Total income for selected year.
+- Total expense for selected year.
+- Total balance for selected year.
+- Savings rate.
+- Average expense.
+- Transaction count.
+- Category count.
+- Wallet count.
+
+Charts and data:
+- The controller prepares chart-friendly arrays.
+- EJS renders the page.
+- ApexCharts is used on the frontend for visualization.
+
+
+12. Reminder Module
+-------------------
+The reminder system tracks bills, EMI, money borrowed, money lent, and tasks.
+
+Reminder categories:
+- emi
+- bill
+- borrowed
+- lent
+- task
+
+Main features:
+- Add reminder.
+- Edit reminder.
+- Delete reminder.
+- Search reminders.
+- Filter reminders by category/status/date.
+- Tab-based organization.
+- Calendar view.
+- Due today and overdue tracking.
+- Priority support.
+- Reminder-before support.
+- Repeat support for EMI and bills.
+- Mark EMI/Bill as paid.
+- Mark borrowed money as returned.
+- Mark lent money as received.
+- Mark task as completed.
+
+Reminder repeat types:
+- none
+- monthly
+- quarterly
+- yearly
+
+Reminder priorities:
+- high
+- medium
+- low
+
+EMI/Bill behavior:
+- Requires title, amount, due date, and wallet.
+- When marked paid, an expense transaction is automatically created.
+- If the reminder repeats, the due date is moved to the next repeat period and status returns to upcoming.
+- If it does not repeat, status becomes paid.
+- If required expense category does not exist, it can auto-create EMI or Bills expense category.
+
+Borrowed money behavior:
+- Requires person name, amount, borrow date, and return date.
+- Return date cannot be before borrow date.
+- Can be marked returned.
+
+Lent money behavior:
+- Requires person name, amount, given date, and expected return date.
+- Expected return date cannot be before given date.
+- Can be marked received.
+
+Task behavior:
+- Requires title and due date.
+- Can be marked completed.
+
+Reminder summary:
+- Total active reminders
+- Due today reminders
+- Overdue reminders
+- Money to pay
+- Money to receive
+
+
+13. Settings Module
+-------------------
+Settings allow the user to customize profile and finance preferences.
+
+Profile settings:
+- Full name
+- Phone
+- Timezone
+- Profile image
+
+Preference settings:
+- Default currency
+- Date format
+- Month start day
+- Default wallet
+- Monthly budget limit
+
+Notification settings:
+- Budget alert
+- Bill reminder
+- Weekly summary
+
+Validation:
+- Timezone is required.
+- Default currency is required.
+- Monthly budget limit must be 0 or greater.
+- Default wallet must exist if selected.
+
+Default settings:
+- Timezone: Asia/Kolkata
+- Currency: INR
+- Date format: DD/MM/YYYY
+- Month start: 1
+- Monthly budget limit: 0
+- Budget alert: enabled
+- Bill reminder: enabled
+- Weekly summary: disabled
+
+
+14. Header Notifications
+------------------------
+The server loads notifications for every request.
+
+Notification behavior:
+- If user is not logged in, notifications are empty.
+- If user is logged in, reminders are loaded.
+- User notification settings are checked.
+- Header notification count shows due today plus overdue reminders.
+- Up to 6 reminder alert items are prepared for the header.
+- If loading fails, default empty notification state is used.
+
+
+15. Database Collections
+------------------------
+
+users:
+- Stores user email, profile, preferences, notification settings, createdAt, and updatedAt.
+
+transactions:
+- Stores income and expense records with category, wallet, amount, type, date, description, and optional bill image.
+
+wallets:
+- Stores wallet name, type, currency, opening balance, opening date, and notes.
+
+walletTransfers:
+- Stores transfer records between wallets.
+
+categories:
+- Stores income and expense categories with name, type, icon, and description.
+
+budgets:
+- Stores monthly/custom budget records, overall limits, notes, and category budgets.
+
+reminders:
+- Stores EMI, bill, borrowed, lent, and task reminders.
+
+otps:
+- Stores OTP records, expiry, status, attempt count, and verification state.
+
+emailLeads:
+- Stores emails that requested OTP and tracks verification/attempt metadata.
+
+sessions:
+- Stores express sessions through connect-mongo.
+
+session history collection:
+- The app also uses a collection helper for saving login/logout session history.
+
+
+16. Security and Validation
+---------------------------
+Security-related behavior:
+- Auth middleware protects private pages.
+- alreadyAuth middleware prevents logged-in users from returning to login.
+- Sessions are stored in MongoDB.
+- Session cookie is httpOnly.
+- sameSite is set to lax.
+- secure cookie is enabled only in production.
+- Flash messages avoid silent failures.
+- OTP attempts are limited.
+- Blocked OTPs prevent brute-force style repeated verification.
+- User records are scoped by userId.
+- Most update/delete operations check both item id and userId.
+
+Validation examples:
+- Email format validation.
+- OTP must be 6 digits.
+- Transaction amount must be greater than 0.
+- Transaction type must be income or expense.
+- Category must exist.
+- Wallet must exist.
+- Category type must match transaction type.
+- Wallet transfer amount must be greater than 0.
+- Transfer source and destination wallets must be different.
+- Source wallet must have enough balance.
+- Category budget limit must be 0 or greater.
+- Reminder dates must be valid.
+- Return dates cannot be before borrow/given dates.
+- Bill image file type and size are validated.
+
+
+17. User Interface Pages
+------------------------
+
+Login page:
+- Email input.
+- OTP request.
+- OTP verification.
+- Flash messages.
+
+Dashboard:
+- Summary cards.
+- Monthly financial overview.
+- Category breakdown.
+- Wallet balances.
+- Budget progress.
+- Reminder alerts.
+- Upcoming tasks.
+
+Transactions:
+- Transaction table/list.
+- Add/edit/delete transaction forms.
+- Filters.
+- Category and wallet dropdowns.
+- Bill image attachment support.
+
+Wallet:
+- Wallet cards/list.
+- Add/edit/delete wallet.
+- Transfer between wallets.
+- Balance calculation.
+- Filtering.
+
+Categories:
+- Category list.
+- Starter categories.
+- Add/edit/delete category.
+- Icon and type display.
+- Usage count.
+
+Budget:
+- Budget summary cards.
+- Budget Snapshot.
+- Category Budget Planner.
+- Budget Alerts.
+- Budget vs Expense Trend.
+- Budget History.
+
+Analytics:
+- Year filter.
+- Financial charts.
+- Category breakdown.
+- Recent transactions.
+- Wallet summaries.
+
+Reminders:
+- EMI/Bill tab.
+- Borrowed tab.
+- Lent tab.
+- Tasks tab.
+- Calendar.
+- Reminder summary.
+- Mark paid/returned/received/completed actions.
+
+Settings:
+- Profile settings.
+- Preferences.
+- Notification settings.
+
+
+18. Main Routes
+---------------
+
+Authentication:
+- GET / : Show login page.
+- POST / : Send OTP or verify OTP.
+- GET /dashboard : Show dashboard.
+- GET /logout : Logout user.
+
+Transactions:
+- GET /transactions : Show transaction page.
+- POST /transactions/add : Add transaction.
+- POST /transactions/:id/update : Update transaction.
+- POST /transactions/:id/delete : Delete transaction.
+
+Analytics:
+- GET /analytics : Show analytics page.
+
+Wallet:
+- GET /wallet : Show wallet page.
+- POST /wallet/add : Add wallet.
+- POST /wallet/transfer : Transfer money between wallets.
+- POST /wallet/:id/update : Update wallet.
+- POST /wallet/:id/delete : Delete wallet.
+
+Categories:
+- GET /categories : Show categories page.
+- POST /categories/add : Add category.
+- POST /categories/:id/update : Update category.
+- POST /categories/:id/delete : Delete category.
+
+Budget:
+- GET /budget : Show budget page.
+- POST /budget/save : Save overall budget.
+- POST /budget/category/save : Save category budget.
+- POST /budget/category/delete : Delete category budget.
+
+Reminders:
+- GET /reminders : Show reminders page.
+- POST /reminders/add : Add reminder.
+- POST /reminders/:id/update : Update reminder.
+- POST /reminders/:id/delete : Delete reminder.
+- POST /reminders/:id/mark-paid : Mark EMI/Bill as paid.
+- POST /reminders/:id/mark-returned : Mark borrowed money as returned.
+- POST /reminders/:id/mark-received : Mark lent money as received.
+- POST /reminders/:id/mark-complete : Mark task as completed.
+
+Settings:
+- GET /settings : Show settings page.
+- POST /settings/update : Update settings.
+
+
+19. Important Business Rules
+----------------------------
+- Every user sees only their own data.
+- Income and expense categories are separate.
+- A transaction category must match the transaction type.
+- A transaction must belong to an existing wallet.
+- Wallets in use cannot be deleted.
+- Categories in use cannot be deleted.
+- Wallet transfers require enough balance in the source wallet.
+- Budget status is based on selected period spending.
+- Category budget alerts appear when spending is near or over budget.
+- EMI/Bill reminder payment creates an expense transaction automatically.
+- Repeating paid reminders move to next due date instead of staying completed.
+- Reminder notifications depend on user notification settings.
+
+
+20. Environment and Configuration
+---------------------------------
+Expected environment values:
+- SESSION_SECRET: Secret used to sign sessions.
+- MONGO_URI: MongoDB connection string for session store.
+- Email service variables may be required by utils/emailService.js depending on its implementation.
+- PORT: Optional server port. Defaults to 3000.
+- NODE_ENV: Used to enable secure session cookies in production.
+
+Local database:
+- config/db.js currently uses local MongoDB directly.
+- The app database name is expanceTracker.
+
+
+21. Strengths of the Project
+----------------------------
+- Clear MVC-style organization with routes, controllers, collections, views, middleware, and utilities.
+- MongoDB access is separated into collection helper files.
+- Controllers focus on request handling, validation, and view rendering.
+- User data is scoped by session userId.
+- Useful financial modules are integrated together.
+- Dashboard combines transactions, wallets, budgets, reminders, and settings.
+- Reminder payments can automatically create transactions.
+- Wallet balances account for opening balance, transactions, and transfers.
+- Category and wallet renames update transaction references.
+- Starter categories improve first-use experience.
+- Budget alerts and reminder notifications help users act on important items.
+
+
+22. Possible Future Improvements
+--------------------------------
+- Move MongoDB URI in config/db.js to environment variables for deployment consistency.
+- Add passwordless OTP rate limiting per IP and email.
+- Add CSRF protection for POST forms.
+- Add server-side file upload storage instead of storing bill image data directly in form payload.
+- Add automated tests for controllers, collection helpers, and utility logic.
+- Add indexes in MongoDB for userId, dates, category, wallet, and status fields.
+- Add export to CSV/PDF for transactions and analytics.
+- Add recurring transaction support.
+- Add multi-currency conversion.
+- Add dark mode preference.
+- Add email reminders/cron job for due reminders.
+- Add richer budget forecasting.
+- Add mobile-focused layout improvements.
+
+
+23. Summary
+-----------
+Expance Tracker is a personal finance management application built with Node.js, Express.js, EJS, MongoDB, and Bootstrap assets. It supports OTP login, dashboard reporting, transaction tracking, wallet management, category management, budgeting, analytics, reminders, notifications, and user settings. The project is organized in a maintainable MVC-like structure and uses MongoDB collection helper modules for data access. It is suitable as a complete personal finance tracker and can be extended further with exports, scheduled notifications, stronger security, and automated testing.

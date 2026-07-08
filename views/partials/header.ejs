@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <!-- Meta Tags -->
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title> KTSPL Expances Tracker Software</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="Streamline your business with our advanced CRM template. Easily integrate and customize to manage sales, support, and customer interactions efficiently. Perfect for any business size">
+    <meta name="keywords"
+        content="Advanced CRM template, customer relationship management, business CRM, sales optimization, customer support software, CRM integration, customizable CRM, business tools, enterprise CRM solutions">
+    <meta name="author" content="Dreams Technologies">
+    <meta name="robots" content="index, follow">
+
+    <!-- Favicon -->
+    <link rel="shortcut icon" href="assets/img/favicon.png">
+
+    <!-- Apple Icon -->
+    <link rel="apple-touch-icon" href="assets/img/apple-icon.png">
+
+    <!-- Theme Config Js -->
+    <script src="assets/js/theme-script.js"></script>
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="assets/css/bootstrap.min.css">
+
+    <!-- Daterangepikcer CSS -->
+    <link rel="stylesheet" href="assets/plugins/daterangepicker/daterangepicker.css">
+
+    <!-- Choices CSS -->
+    <link rel="stylesheet" href="assets/plugins/choices.js/public/assets/styles/choices.min.css">
+
+    <!-- Select2 CSS -->
+    <link rel="stylesheet" href="assets/plugins/select2/css/select2.min.css">
+
+    <!-- Flatpickr CSS -->
+    <link rel="stylesheet" href="assets/plugins/flatpickr/flatpickr.min.css">
+
+    <!-- Tabler Icon CSS -->
+    <link rel="stylesheet" href="assets/plugins/tabler-icons/tabler-icons.min.css">
+
+    <!-- Simplebar CSS -->
+    <link rel="stylesheet" href="assets/plugins/simplebar/simplebar.min.css">
+
+    <!-- Datatable CSS -->
+    <link rel="stylesheet" href="assets/plugins/datatables/css/dataTables.bootstrap5.min.css">
+
+    <!-- Daterangepicker CSS -->
+    <link rel="stylesheet" href="assets/plugins/daterangepicker/daterangepicker.css">
+
+    <!-- Main CSS -->
+    <link rel="stylesheet" href="assets/css/style.css" id="app-style">
+
+</head>
+
+<body>
+
+    <%
+    const headerUser = currentUser || {};
+    const headerDisplayName = headerUser.displayName || "Expense Tracker User";
+    const headerEmail = headerUser.email || "";
+    const headerInitials = headerUser.initials || "ET";
+    const headerProfileImage = headerUser.profileImage || "";
+    const reminderBell = typeof headerNotifications !== "undefined"
+        ? headerNotifications
+        : { enabled: true, count: 0, items: [] };
+    %>
+
+    <!-- Begin Wrapper -->
+    <div class="main-wrapper">
+        <%- include("../partials/flash") %>
+            <!-- Topbar Start -->
+            <header class="navbar-header">
+                <div class="page-container topbar-menu">
+                    <div class="d-flex align-items-center gap-2">
+
+                        <!-- Logo -->
+                        <a href="/dashboard" class="logo">
+                            <span class="logo-light">
+                                <span class="logo-lg"><img src="assets/img/logo.svg" alt="logo"></span>
+                                <span class="logo-sm"><img src="assets/img/logo-small.svg" alt="small logo"></span>
+                            </span>
+                            <span class="logo-dark">
+                                <span class="logo-lg"><img src="assets/img/logo-white.svg" alt="dark logo"></span>
+                            </span>
+                        </a>
+
+                        <!-- Sidebar Mobile Button -->
+                        <a id="mobile_btn" class="mobile-btn" href="#sidebar">
+                            <i class="ti ti-menu-deep fs-24"></i>
+                        </a>
+
+                        <button class="sidenav-toggle-btn btn border-0 p-0" id="toggle_btn2">
+                            <i class="ti ti-arrow-bar-to-right"></i>
+                        </button>
+
+                        <div class="me-auto d-flex align-items-center header-search d-lg-flex d-none"></div>
+                    </div>
+
+                    <div class="d-flex align-items-center">
+
+                        <div class="header-item d-flex d-lg-none me-2">
+                            <button class="topbar-link btn" data-bs-toggle="modal" data-bs-target="#searchModal"
+                                type="button">
+                                <i class="ti ti-search fs-16"></i>
+                            </button>
+                        </div>
+
+                        <div class="header-item">
+                            <div class="dropdown me-2">
+                                <a href="javascript:void(0);" class="btn topbar-link btnFullscreen"><i
+                                        class="ti ti-maximize"></i></a>
+                            </div>
+                        </div>
+
+                        <div class="header-item">
+                            <div class="dropdown me-2">
+                                <button class="topbar-link btn topbar-link dropdown-toggle drop-arrow-none"
+                                    data-bs-toggle="dropdown" data-bs-offset="0,24" type="button" aria-haspopup="false"
+                                    aria-expanded="false">
+                                    <i class="ti ti-bell-check fs-18 animate-ring"></i>
+                                    <% if (reminderBell.count > 0) { %>
+                                        <span class="badge rounded-pill"><%= reminderBell.count %></span>
+                                    <% } %>
+                                </button>
+
+                                <div class="dropdown-menu p-0 dropdown-menu-end dropdown-menu-lg"
+                                    style="min-height: 300px;">
+
+                                    <div class="p-2 border-bottom">
+                                        <div class="row align-items-center">
+                                            <div class="col">
+                                                <h6 class="m-0 fs-16 fw-semibold">Notifications</h6>
+                                            </div>
+                                            <div class="col-auto">
+                                                <span class="badge <%= reminderBell.enabled ? "bg-success-subtle text-success" : "bg-light text-dark" %>">
+                                                    <%= reminderBell.enabled ? "Reminder alerts on" : "Reminder alerts off" %>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="notification-body position-relative z-2 rounded-0" data-simplebar>
+                                        <% if (!reminderBell.items.length) { %>
+                                            <div class="dropdown-item py-4 text-center text-muted">
+                                                No reminder alerts right now. Your due items will appear here.
+                                            </div>
+                                        <% } %>
+
+                                        <% reminderBell.items.forEach((item, index) => { %>
+                                            <div class="dropdown-item notification-item py-3 text-wrap <%= index < reminderBell.items.length - 1 ? "border-bottom" : "" %>">
+                                                <div class="d-flex">
+                                                    <div class="me-2 position-relative flex-shrink-0">
+                                                        <span class="avatar avatar-md rounded-circle bg-<%= item.accentClass %>-subtle text-<%= item.accentClass %> d-inline-flex align-items-center justify-content-center">
+                                                            <i class="ti <%= item.category === "task" ? "ti-checklist" : item.category === "lent" ? "ti-cash-banknote" : item.category === "borrowed" ? "ti-credit-card-pay" : "ti-bell-ringing" %>"></i>
+                                                        </span>
+                                                    </div>
+                                                    <div class="flex-grow-1">
+                                                        <p class="mb-0 fw-medium text-dark"><%= item.title %></p>
+                                                        <p class="mb-1 text-wrap"><%= item.subtitle %></p>
+                                                        <div class="d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                                                            <span class="fs-12"><i class="ti ti-clock me-1"></i><%= item.displayStatus %></span>
+                                                            <% if (item.amount > 0) { %>
+                                                                <span class="badge bg-light text-dark">Rs. <%= Number(item.amount || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) %></span>
+                                                            <% } %>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        <% }) %>
+                                    </div>
+
+                                    <div class="p-2 rounded-bottom border-top text-center">
+                                        <a href="/reminders"
+                                            class="text-center text-decoration-underline fs-14 mb-0">
+                                            Open Reminders & Dues
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="dropdown profile-dropdown d-flex align-items-center justify-content-center">
+                            <a href="javascript:void(0);"
+                                class="topbar-link dropdown-toggle drop-arrow-none position-relative"
+                                data-bs-toggle="dropdown" data-bs-offset="0,22" aria-haspopup="false"
+                                aria-expanded="false">
+                                <% if (headerProfileImage) { %>
+                                    <img src="<%= headerProfileImage %>" width="38" height="38" class="rounded-1 d-flex object-fit-cover"
+                                        alt="user-image">
+                                <% } else { %>
+                                    <span class="avatar avatar-sm rounded-1 bg-primary text-white d-inline-flex align-items-center justify-content-center fw-semibold">
+                                        <%= headerInitials %>
+                                    </span>
+                                <% } %>
+                                <span class="online text-success"><i
+                                        class="ti ti-circle-filled d-flex bg-white rounded-circle border border-1 border-white"></i></span>
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-end dropdown-menu-md p-2">
+
+                                <div class="d-flex align-items-center bg-light rounded-3 p-2 mb-2">
+                                    <% if (headerProfileImage) { %>
+                                        <img src="<%= headerProfileImage %>" class="rounded-circle object-fit-cover" width="42"
+                                            height="42" alt="Img">
+                                    <% } else { %>
+                                        <span class="avatar avatar-md rounded-circle bg-primary text-white d-inline-flex align-items-center justify-content-center fw-semibold">
+                                            <%= headerInitials %>
+                                        </span>
+                                    <% } %>
+                                    <div class="ms-2">
+                                        <p class="fw-medium text-dark mb-0"><%= headerDisplayName %></p>
+                                        <span class="d-block fs-13"><%= headerEmail || "Expense Tracker User" %></span>
+                                    </div>
+                                </div>
+
+                                <a href="/settings" class="dropdown-item">
+                                    <i class="ti ti-user-circle me-1 align-middle"></i>
+                                    <span class="align-middle">Profile Settings</span>
+                                </a>
+
+                                <div
+                                    class="form-check form-switch form-check-reverse d-flex align-items-center justify-content-between dropdown-item mb-0">
+                                    <label class="form-check-label" for="notify"><i
+                                            class="ti ti-bell"></i>Notifications</label>
+                                    <input class="form-check-input me-0" type="checkbox" role="switch" id="notify" <%= reminderBell.enabled ? "checked" : "" %> disabled>
+                                </div>
+
+                                <a href="javascript:void(0);" class="dropdown-item">
+                                    <i class="ti ti-help-circle me-1 align-middle"></i>
+                                    <span class="align-middle">Help & Support</span>
+                                </a>
+
+                                <a href="/settings" class="dropdown-item">
+                                    <i class="ti ti-settings me-1 align-middle"></i>
+                                    <span class="align-middle">Settings</span>
+                                </a>
+
+                                <div class="pt-2 mt-2 border-top">
+                                    <a href="/logout" class="dropdown-item text-danger">
+                                        <i class="ti ti-logout me-1 fs-17 align-middle"></i>
+                                        <span class="align-middle">Sign Out</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </header>
+            <!-- Topbar End -->
+            <div class="page-wrapper">

@@ -1,0 +1,701 @@
+<%
+function formatAmount(amount) {
+    return "Rs. " + Number(amount || 0).toLocaleString("en-IN", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
+}
+
+function reminderBadgeClass(status) {
+    if (status === "overdue") {
+        return "bg-danger-subtle text-danger";
+    }
+
+    if (status === "due-today") {
+        return "bg-warning-subtle text-warning";
+    }
+
+    return "bg-primary-subtle text-primary";
+}
+
+function reminderPriorityClass(priority) {
+    if (priority === "high") {
+        return "bg-danger-subtle text-danger";
+    }
+
+    if (priority === "low") {
+        return "bg-success-subtle text-success";
+    }
+
+    return "bg-warning-subtle text-warning";
+}
+
+const monthLabels = monthOverview.map((item) => item.label);
+const monthIncome = monthOverview.map((item) => Number(item.income || 0));
+const monthExpense = monthOverview.map((item) => Number(item.expense || 0));
+const monthBalance = monthOverview.map((item) => Number(item.balance || 0));
+const categoryLabels = categoryBreakdown.map((item) => item.category);
+const categoryValues = categoryBreakdown.map((item) => Number(item.amount || 0));
+const walletLabels = walletBalances.map((item) => item.name);
+const walletValues = walletBalances.map((item) => Number(item.balance || 0));
+const monthCapacity = monthOverview.map((item) => Math.max(
+    Number(item.income || 0),
+    Number(item.expense || 0),
+    Number(budgetTarget || 0)
+));
+const monthCapacityRemainder = monthCapacity.map((value, index) => Math.max(value - monthExpense[index], 0));
+const monthSavingsRate = monthOverview.map((item) => (
+    Number(item.income || 0) > 0
+        ? Number((((item.income - item.expense) / item.income) * 100).toFixed(2))
+        : 0
+));
+const monthBudgetUseTrend = monthOverview.map((item) => (
+    Number(budgetTarget || 0) > 0
+        ? Number(Math.min(((Number(item.expense || 0) / Number(budgetTarget || 0)) * 100), 100).toFixed(2))
+        : 0
+));
+const monthBudgetLeftTrend = monthBudgetUseTrend.map((value) => Number((100 - value).toFixed(2)));
+const totalCategoryAmount = categoryValues.reduce((sum, value) => sum + value, 0);
+const totalWalletBalance = walletValues.reduce((sum, value) => sum + value, 0);
+const topCategory = categoryBreakdown[0] || null;
+const bestBalanceMonth = monthOverview.reduce((best, month) => (
+    !best || Number(month.balance || 0) > Number(best.balance || 0) ? month : best
+), null);
+const reminderPayProgress = reminderSummary.moneyToPay > 0
+    ? Math.min((reminderSummary.overdue / Math.max(reminderSummary.totalActive, 1)) * 100, 100)
+    : 0;
+%>
+
+<%- include("partials/header.ejs") %>
+    <%- include("partials/sidebar.ejs") %>
+
+        <style>
+            .dashboard-budget-card #retained-chart,
+            .dashboard-budget-card #churned-chart {
+                min-width: 0;
+                width: 100%;
+                max-width: 110px;
+            }
+
+            .dashboard-budget-card .budget-stat-copy {
+                min-width: 0;
+                flex-shrink: 0;
+            }
+
+            .dashboard-budget-card .budget-meta-note {
+                word-break: break-word;
+            }
+        </style>
+
+        <div class="content pb-0">
+
+            <div class="d-flex align-items-center justify-content-between gap-2 mb-4 flex-wrap">
+                <div>
+                    <h4 class="mb-1">Expense Tracker</h4>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb mb-0 p-0">
+                            <li class="breadcrumb-item"><a href="/dashboard">Home</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Expense Tracker</li>
+                        </ol>
+                    </nav>
+                </div>
+                <div class="gap-2 d-flex align-items-center flex-wrap">
+                    <a href="/dashboard" class="btn btn-icon btn-outline-light shadow"><i class="ti ti-refresh"></i></a>
+                </div>
+            </div>
+
+            <div class="row flex-fill">
+                <div class="col-xl-9 d-flex">
+                    <div class="row g-3 flex-fill">
+                        <div class="col-lg-3 col-md-6 d-flex">
+                            <div class="card growth-card flex-fill bg-soft-success border-0 shadow-none">
+                                <div class="card-header text-center border-0 py-3">
+                                    <div class="avatar rounded avatar-md bg-success">
+                                        <img src="assets/img/icons/carbon_growth.svg" alt="icon" class="img-fluid p-2">
+                                    </div>
+                                </div>
+                                <div class="card-body bg-white rounded border mb-1 p-3">
+                                    <p class="mb-2 fs-13 fw-medium text-dark">Total Income</p>
+                                    <div class="fs-28 text-dark fw-bold mb-3"><%= formatAmount(totalIncome) %></div>
+                                    <div class="fs-13 fw-medium text-muted">This month: <%= formatAmount(currentMonthIncome) %></div>
+                                    <div id="income-mini-chart" class="mt-3"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6 d-flex">
+                            <div class="card growth-card flex-fill bg-soft-danger border-0 shadow-none">
+                                <div class="card-header text-center border-0 py-3">
+                                    <div class="avatar rounded avatar-md bg-danger">
+                                        <img src="assets/img/icons/hand-icon.svg" alt="icon" class="img-fluid p-2">
+                                    </div>
+                                </div>
+                                <div class="card-body bg-white rounded border mb-1 p-3">
+                                    <p class="mb-2 fs-13 fw-medium text-dark">Total Expenses</p>
+                                    <div class="fs-28 text-dark fw-bold mb-3"><%= formatAmount(totalExpense) %></div>
+                                    <div class="fs-13 fw-medium text-muted">This month: <%= formatAmount(currentMonthExpense) %></div>
+                                    <div id="expense-mini-chart" class="mt-3"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6 d-flex">
+                            <div class="card growth-card flex-fill bg-purple-subtle border-0 shadow-none">
+                                <div class="card-header text-center border-0 py-3">
+                                    <div class="avatar rounded avatar-md bg-purple">
+                                        <img src="assets/img/icons/users.svg" alt="icon" class="img-fluid p-2">
+                                    </div>
+                                </div>
+                                <div class="card-body bg-white rounded border mb-1 p-3">
+                                    <p class="mb-2 fs-13 fw-medium text-dark">Remaining Balance</p>
+                                    <div class="fs-28 text-dark fw-bold mb-3"><%= formatAmount(currentBalance) %></div>
+                                    <div class="fs-13 fw-medium text-muted"><%= walletCount %> wallets connected</div>
+                                    <div id="balance-mini-chart" class="mt-3"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-3 col-md-6 d-flex">
+                            <div class="card growth-card flex-fill bg-soft-warning border-0 shadow-none">
+                                <div class="card-header text-center border-0 py-3">
+                                    <div class="avatar rounded avatar-md bg-warning">
+                                        <img src="assets/img/icons/fluent_arrow.svg" alt="icon" class="img-fluid p-2">
+                                    </div>
+                                </div>
+                                <div class="card-body bg-white rounded border mb-1 p-3">
+                                    <p class="mb-2 fs-13 fw-medium text-dark">Savings Rate</p>
+                                    <div class="fs-28 text-dark fw-bold mb-3"><%= savingsRate.toFixed(1) %>%</div>
+                                    <div class="fs-13 fw-medium text-muted"><%= categoryCount %> categories tracked</div>
+                                    <div id="savings-mini-chart" class="mt-3"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-xl-3 d-flex">
+                    <div class="card flex-fill dashboard-budget-card">
+                        <div class="card-header d-flex align-items-center justify-content-between border-0">
+                            <span class="fs-18 fw-bold text-dark">Budget Snapshot</span>
+                            <a href="/budget" class="btn btn-sm btn-icon btn-outline-light"><i class="ti ti-chart-pie"></i></a>
+                        </div>
+                        <div class="card-body pt-0">
+                            <div class="d-flex align-items-center justify-content-between border-bottom pb-2 mb-2">
+                                <div id="retained-chart" class="flex-grow-1"></div>
+                                <div class="text-end budget-stat-copy">
+                                    <div class="fs-24 text-dark fw-semibold mb-1 d-flex align-items-center gap-1">
+                                        <%= budgetLeftPercent.toFixed(0) %>%
+                                    </div>
+                                    <p class="mb-0 fs-13 fw-medium">Budget Left</p>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div id="churned-chart" class="flex-grow-1"></div>
+                                <div class="text-end budget-stat-copy">
+                                    <div class="fs-24 text-dark fw-semibold mb-1 d-flex align-items-center gap-1">
+                                        <%= budgetUsedPercent.toFixed(0) %>%
+                                    </div>
+                                    <p class="mb-0 fs-13 fw-medium">Budget Used</p>
+                                </div>
+                            </div>
+                            <div class="mt-3 pt-1 budget-meta-note">
+                                <small class="text-muted d-block">Active budget limit: <%= formatAmount(budgetTarget) %></small>
+                                <small class="text-muted d-block"><%= budgetPeriodLabel %></small>
+                                <small class="d-block mt-2 <%= budgetRemainingAmount >= 0 ? "text-success" : "text-danger fw-semibold" %>">
+                                    <%= budgetRemainingAmount >= 0 ? "Budget left: " : "Over by: " %><%= formatAmount(Math.abs(budgetRemainingAmount)) %>
+                                </small>
+                            </div>
+
+                            <% if (dashboardBudgetAlerts.length) { %>
+                                <div class="mt-3 pt-3 border-top">
+                                    <% dashboardBudgetAlerts.forEach((alert) => { %>
+                                        <div class="d-flex align-items-start justify-content-between gap-2 mb-2">
+                                            <div class="min-w-0">
+                                                <div class="fs-13 fw-semibold text-dark"><%= alert.title %></div>
+                                                <small class="text-muted d-block"><%= alert.periodLabel %></small>
+                                            </div>
+                                            <div class="text-end">
+                                                <span class="badge <%= alert.remaining < 0 ? "bg-danger-subtle text-danger" : "bg-warning-subtle text-warning" %>"><%= alert.status %></span>
+                                                <small class="d-block mt-1 <%= alert.remaining < 0 ? "text-danger" : "text-warning" %>">
+                                                    <%= alert.remaining < 0 ? `-${formatAmount(Math.abs(alert.remaining))}` : `${alert.usedPercent.toFixed(0)}% used` %>
+                                                </small>
+                                            </div>
+                                        </div>
+                                    <% }) %>
+                                </div>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12 col-xl-6 d-flex">
+                    <div class="card flex-fill">
+                        <div class="card-body pb-0">
+                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                                <div>
+                                    <div class="mb-0 fs-18 fw-bold text-dark">Monthly Cash Flow</div>
+                                    <small class="text-muted">Expense against monthly earning capacity</small>
+                                </div>
+                                <span class="badge bg-light text-dark">Last 6 Months</span>
+                            </div>
+                            <div id="revenue-chart2"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-12 col-xl-6 d-flex">
+                    <div class="card flex-fill">
+                        <div class="card-body pb-0">
+                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                                <div>
+                                    <div class="mb-0 fs-18 fw-bold text-dark">Expense Category Share</div>
+                                    <small class="text-muted">
+                                        <%= topCategory ? `${topCategory.category} leads with ${formatAmount(topCategory.amount)}` : "Add expense entries to unlock category insights" %>
+                                    </small>
+                                </div>
+                                <span class="badge bg-light text-dark"><%= new Date().getFullYear() %></span>
+                            </div>
+                            <div id="region-wise-growth"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-xl-4 d-flex">
+                    <div class="card flex-fill">
+                        <div class="card-body">
+                            <div class="d-flex align-items-start justify-content-between gap-3 mb-3">
+                                <div>
+                                    <div class="mb-0 fs-18 fw-bold text-dark">Reminder Pulse</div>
+                                    <small class="text-muted">Quick view of your dues, tasks, and follow-ups</small>
+                                </div>
+                                <a href="/reminders" class="btn btn-sm btn-outline-light">Open</a>
+                            </div>
+
+                            <div class="row g-3 mb-3">
+                                <div class="col-6">
+                                    <div class="border rounded p-3 h-100">
+                                        <div class="text-muted fs-13 mb-1">Due Today</div>
+                                        <div class="fs-24 fw-bold text-warning"><%= reminderSummary.dueToday %></div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="border rounded p-3 h-100">
+                                        <div class="text-muted fs-13 mb-1">Overdue</div>
+                                        <div class="fs-24 fw-bold text-danger"><%= reminderSummary.overdue %></div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="border rounded p-3 h-100">
+                                        <div class="text-muted fs-13 mb-1">To Pay</div>
+                                        <div class="fs-18 fw-bold text-dark"><%= formatAmount(reminderSummary.moneyToPay) %></div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="border rounded p-3 h-100">
+                                        <div class="text-muted fs-13 mb-1">To Receive</div>
+                                        <div class="fs-18 fw-bold text-dark"><%= formatAmount(reminderSummary.moneyToReceive) %></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <span class="text-muted fs-13">Urgency Ratio</span>
+                                    <span class="fw-semibold"><%= reminderSummary.totalActive ? `${Math.round((reminderSummary.overdue / reminderSummary.totalActive) * 100)}%` : "0%" %></span>
+                                </div>
+                                <div class="progress progress-sm">
+                                    <div class="progress-bar bg-danger" role="progressbar" style="width: <%= reminderPayProgress %>%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-8 d-flex">
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <div>
+                                    <div class="mb-0 fs-18 fw-bold text-dark">Net Growth Trend</div>
+                                    <small class="text-muted">
+                                        <%= bestBalanceMonth ? `${bestBalanceMonth.label} had the strongest balance` : "Waiting for transaction history" %>
+                                    </small>
+                                </div>
+                                <span class="badge bg-light text-dark">Last 6 Months</span>
+                            </div>
+                            <div id="growth-trend"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-xl-5 d-flex">
+                    <div class="card flex-fill">
+                        <div class="card-body pb-0">
+                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                                <div>
+                                    <div class="mb-0 fs-18 fw-bold text-dark">Wallet Balance Overview</div>
+                                    <small class="text-muted">
+                                        <%= walletBalances.length ? `${walletBalances.length} active wallets tracked` : "Create wallets to compare balances" %>
+                                    </small>
+                                </div>
+                                <span class="badge bg-light text-dark"><%= formatAmount(totalWalletBalance) %></span>
+                            </div>
+                            <div id="wallet-balance-overview"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-xl-7 d-flex">
+                    <div class="card flex-fill">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                                <div>
+                                    <div class="mb-0 fs-18 fw-bold text-dark">Upcoming Reminder Alerts</div>
+                                    <small class="text-muted">
+                                        <%= reminderAlerts.length ? "Most urgent upcoming items from Reminders & Dues" : "Add reminders to surface alerts here" %>
+                                    </small>
+                                </div>
+                                <a href="/reminders" class="btn btn-sm btn-outline-light">View All</a>
+                            </div>
+
+                            <% if (!reminderAlerts.length) { %>
+                                <div class="text-center text-muted py-5">
+                                    No reminder alerts yet. Create EMI, bill, borrowed, lent, or task reminders to populate this panel.
+                                </div>
+                            <% } %>
+
+                            <% reminderAlerts.forEach((item) => { %>
+                                <div class="d-flex align-items-center justify-content-between gap-3 border rounded p-3 mb-3">
+                                    <div class="d-flex align-items-center gap-3">
+                                        <span class="avatar avatar-md rounded-circle bg-<%= item.accentClass %>-subtle text-<%= item.accentClass %> d-inline-flex align-items-center justify-content-center">
+                                            <i class="ti <%= item.category === "task" ? "ti-checklist" : item.category === "lent" ? "ti-cash-banknote" : item.category === "borrowed" ? "ti-credit-card-pay" : "ti-bell-ringing" %>"></i>
+                                        </span>
+                                        <div>
+                                            <div class="fw-semibold text-dark"><%= item.title %></div>
+                                            <div class="text-muted fs-13"><%= item.subtitle %></div>
+                                        </div>
+                                    </div>
+                                    <div class="text-end">
+                                        <div><span class="badge <%= reminderBadgeClass(item.lifecycleStatus) %>"><%= item.displayStatus %></span></div>
+                                        <% if (item.amount > 0) { %>
+                                            <div class="fw-semibold mt-2"><%= formatAmount(item.amount) %></div>
+                                        <% } %>
+                                    </div>
+                                </div>
+                            <% }) %>
+
+                            <% if (upcomingTasks.length) { %>
+                                <div class="pt-2 border-top mt-3">
+                                    <div class="fw-semibold text-dark mb-3">Upcoming Tasks</div>
+                                    <div class="row g-3">
+                                        <% upcomingTasks.forEach((task) => { %>
+                                            <div class="col-md-4">
+                                                <div class="border rounded p-3 h-100">
+                                                    <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                                                        <span class="badge <%= reminderPriorityClass(task.priority) %>"><%= task.priority %></span>
+                                                        <span class="badge <%= reminderBadgeClass(task.lifecycleStatus) %>"><%= task.lifecycleStatus.replace("-", " ") %></span>
+                                                    </div>
+                                                    <div class="fw-semibold text-dark mb-1"><%= task.title %></div>
+                                                    <small class="text-muted"><%= task.dueDateText %></small>
+                                                </div>
+                                            </div>
+                                        <% }) %>
+                                    </div>
+                                </div>
+                            <% } %>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <div class="col-md-12 d-flex">
+                    <div class="card flex-fill">
+                        <div class="card-body">
+                            <div class="mb-4 fs-18 fw-bold text-dark">Monthly Expense Overview</div>
+
+                            <div class="table-responsive custom-table table-nowrap">
+                                <table class="table table-nowrap">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Period</th>
+                                            <th>Income</th>
+                                            <th>Expenses</th>
+                                            <th>Balance</th>
+                                            <th>Top Category</th>
+                                            <th>Budget Used</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <% if (!monthOverview.length) { %>
+                                            <tr>
+                                                <td colspan="7" class="text-center py-5 text-muted">
+                                                    No transactions found yet. Add transactions to populate the dashboard.
+                                                </td>
+                                            </tr>
+                                        <% } %>
+
+                                        <% monthOverview.forEach((month) => { %>
+                                            <% const budgetPercent = budgetTarget > 0 ? Math.min((month.expense / budgetTarget) * 100, 100) : 0; %>
+                                            <tr>
+                                                <td><%= month.label %></td>
+                                                <td class="text-success"><%= formatAmount(month.income) %></td>
+                                                <td class="text-danger"><%= formatAmount(month.expense) %></td>
+                                                <td class="<%= month.balance >= 0 ? "text-primary" : "text-danger" %>"><%= formatAmount(month.balance) %></td>
+                                                <td><%= month.topCategory %></td>
+                                                <td><%= budgetPercent.toFixed(0) %>%</td>
+                                                <td>
+                                                    <span class="badge <%= month.expense <= budgetTarget ? "bg-success-subtle text-success" : "bg-danger-subtle text-danger" %>">
+                                                        <%= month.expense <= budgetTarget ? "On Track" : "Over Budget" %>
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        <% }) %>
+                                    </tbody>
+                                </table>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <script id="dashboard-chart-data" type="application/json">
+            <%- JSON.stringify({
+                monthLabels,
+                monthIncome,
+                monthExpense,
+                monthBalance,
+                monthSavingsRate,
+                monthBudgetLeftTrend,
+                monthBudgetUseTrend,
+                monthCapacityRemainder,
+                categoryLabels: categoryLabels.length ? categoryLabels : ["No Data"],
+                categoryValues: categoryValues.length ? categoryValues : [1],
+                categoryTotalLabel: totalCategoryAmount > 0 ? "100%" : "0%",
+                walletLabels: walletLabels.length ? walletLabels : ["No Wallets"],
+                walletValues: walletValues.length ? walletValues : [0],
+                budgetLeftPercent: Number(budgetLeftPercent.toFixed(0)),
+                budgetUsedPercent: Number(budgetUsedPercent.toFixed(0)),
+            }) %>
+        </script>
+
+        <script>
+            window.addEventListener("load", function () {
+                if (typeof ApexCharts === "undefined") {
+                    return;
+                }
+
+                const chartDataEl = document.querySelector("#dashboard-chart-data");
+                if (!chartDataEl) {
+                    return;
+                }
+
+                const chartData = JSON.parse(chartDataEl.textContent);
+                const borderColor = "#e9ecef";
+                const textMuted = "#6c757d";
+
+                const budgetLeftChartEl = document.querySelector("#retained-chart");
+                if (budgetLeftChartEl) {
+                    new ApexCharts(budgetLeftChartEl, {
+                        chart: { type: "line", height: 72, sparkline: { enabled: true }, toolbar: { show: false } },
+                        series: [{ data: chartData.monthBudgetLeftTrend }],
+                        colors: ["#22c55e"],
+                        stroke: { width: 3, curve: "smooth" },
+                        markers: { size: 0 },
+                        tooltip: { enabled: false }
+                    }).render();
+                }
+
+                const budgetUsedChartEl = document.querySelector("#churned-chart");
+                if (budgetUsedChartEl) {
+                    new ApexCharts(budgetUsedChartEl, {
+                        chart: { type: "line", height: 72, sparkline: { enabled: true }, toolbar: { show: false } },
+                        series: [{ data: chartData.monthBudgetUseTrend }],
+                        colors: ["#ef4444"],
+                        stroke: { width: 3, curve: "smooth" },
+                        markers: { size: 0 },
+                        tooltip: { enabled: false }
+                    }).render();
+                }
+
+                const miniCharts = [
+                    { selector: "#income-mini-chart", data: chartData.monthIncome, color: "#198754" },
+                    { selector: "#expense-mini-chart", data: chartData.monthExpense, color: "#dc3545" },
+                    { selector: "#balance-mini-chart", data: chartData.monthBalance, color: "#0d6efd" },
+                    { selector: "#savings-mini-chart", data: chartData.monthSavingsRate, color: "#ffc107" }
+                ];
+
+                miniCharts.forEach((item) => {
+                    const element = document.querySelector(item.selector);
+                    if (!element) {
+                        return;
+                    }
+
+                    new ApexCharts(element, {
+                        chart: {
+                            type: "area",
+                            height: 60,
+                            sparkline: { enabled: true }
+                        },
+                        series: [{ data: item.data }],
+                        colors: [item.color],
+                        stroke: { curve: "smooth", width: 2.5 },
+                        fill: {
+                            type: "gradient",
+                            gradient: {
+                                shadeIntensity: 0.25,
+                                opacityFrom: 0.35,
+                                opacityTo: 0.05
+                            }
+                        },
+                        tooltip: { enabled: false }
+                    }).render();
+                });
+
+                const cashFlowEl = document.querySelector("#revenue-chart2");
+                if (cashFlowEl) {
+                    new ApexCharts(cashFlowEl, {
+                        chart: { type: "bar", height: 300, stacked: true, toolbar: { show: false } },
+                        series: [
+                            { name: "Spent", data: chartData.monthExpense },
+                            { name: "Capacity", data: chartData.monthCapacityRemainder }
+                        ],
+                        colors: ["#f43f5e", "#e5e7eb"],
+                        dataLabels: { enabled: false },
+                        plotOptions: {
+                            bar: {
+                                columnWidth: "70%",
+                                borderRadius: 8,
+                                borderRadiusApplication: "end"
+                            }
+                        },
+                        stroke: { width: 0 },
+                        xaxis: {
+                            categories: chartData.monthLabels,
+                            labels: { style: { colors: textMuted } },
+                            axisBorder: { color: borderColor },
+                            axisTicks: { color: borderColor }
+                        },
+                        yaxis: {
+                            labels: {
+                                style: { colors: textMuted },
+                                formatter: (value) => "Rs. " + Number(value || 0).toLocaleString("en-IN")
+                            }
+                        },
+                        grid: { borderColor },
+                        legend: { show: false }
+                    }).render();
+                }
+
+                const categoryEl = document.querySelector("#region-wise-growth");
+                if (categoryEl) {
+                    new ApexCharts(categoryEl, {
+                        chart: { type: "donut", height: 300 },
+                        labels: chartData.categoryLabels,
+                        series: chartData.categoryValues,
+                        colors: ["#5b6ee1", "#61c28b", "#fbad42", "#31b0c8", "#8a6fd9", "#f43f5e", "#22c55e"],
+                        dataLabels: { enabled: false },
+                        legend: { position: "bottom" },
+                        plotOptions: {
+                            pie: {
+                                donut: {
+                                    size: "64%",
+                                    labels: {
+                                        show: true,
+                                        total: {
+                                            show: true,
+                                            label: "Total",
+                                            formatter: () => chartData.categoryTotalLabel
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }).render();
+                }
+
+                const trendEl = document.querySelector("#growth-trend");
+                if (trendEl) {
+                    new ApexCharts(trendEl, {
+                        chart: { height: 320, type: "line", toolbar: { show: false } },
+                        series: [
+                            { name: "Income", data: chartData.monthIncome },
+                            { name: "Expense", data: chartData.monthExpense },
+                            { name: "Balance", data: chartData.monthBalance }
+                        ],
+                        colors: ["#22c55e", "#f43f5e", "#6366f1"],
+                        stroke: { width: 3, curve: "smooth" },
+                        dataLabels: { enabled: false },
+                        fill: {
+                            type: "gradient",
+                            gradient: {
+                                shadeIntensity: 0.2,
+                                opacityFrom: 0.25,
+                                opacityTo: 0.02
+                            }
+                        },
+                        xaxis: {
+                            categories: chartData.monthLabels,
+                            labels: { style: { colors: textMuted } },
+                            axisBorder: { color: borderColor },
+                            axisTicks: { color: borderColor }
+                        },
+                        yaxis: {
+                            labels: {
+                                style: { colors: textMuted },
+                                formatter: (value) => "Rs. " + Number(value || 0).toLocaleString("en-IN")
+                            }
+                        },
+                        grid: { borderColor },
+                        legend: { position: "top" }
+                    }).render();
+                }
+
+                const walletOverviewEl = document.querySelector("#wallet-balance-overview");
+                if (walletOverviewEl) {
+                    new ApexCharts(walletOverviewEl, {
+                        chart: { type: "bar", height: 320, toolbar: { show: false } },
+                        series: [
+                            { name: "Balance", data: chartData.walletValues }
+                        ],
+                        colors: ["#6366f1"],
+                        plotOptions: {
+                            bar: {
+                                horizontal: true,
+                                borderRadius: 6,
+                                barHeight: "52%"
+                            }
+                        },
+                        dataLabels: { enabled: false },
+                        xaxis: {
+                            categories: chartData.walletLabels,
+                            labels: {
+                                style: { colors: textMuted },
+                                formatter: (value) => "Rs. " + Number(value || 0).toLocaleString("en-IN")
+                            },
+                            axisBorder: { color: borderColor },
+                            axisTicks: { color: borderColor }
+                        },
+                        yaxis: {
+                            labels: { style: { colors: textMuted } }
+                        },
+                        tooltip: {
+                            y: {
+                                formatter: (value) => "Rs. " + Number(value || 0).toLocaleString("en-IN", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2
+                                })
+                            }
+                        },
+                        grid: { borderColor },
+                        legend: { show: false }
+                    }).render();
+                }
+            });
+        </script>
+
+        <%- include("partials/footer.ejs") %>

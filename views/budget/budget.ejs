@@ -1,0 +1,556 @@
+<%
+function formatAmount(amount) {
+    return "Rs. " + Number(amount || 0).toLocaleString("en-IN", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
+}
+
+function statusBadgeClass(status) {
+    if (status === "Over Budget" || status === "Over") {
+        return "bg-danger-subtle text-danger";
+    }
+
+    if (status === "At Risk" || status === "Near Limit") {
+        return "bg-warning-subtle text-warning";
+    }
+
+    if (status === "On Track") {
+        return "bg-success-subtle text-success";
+    }
+
+    return "bg-light text-dark";
+}
+
+const historyLabels = historyRows.map((item) => item.label);
+const historyBudgetValues = historyRows.map((item) => Number(item.overallLimit || 0));
+const historySpentValues = historyRows.map((item) => Number(item.spent || 0));
+%>
+
+<%- include("../partials/header.ejs") %>
+<%- include("../partials/sidebar.ejs") %>
+
+<style>
+    .budget-page .toolbar-shell {
+        display: flex;
+        align-items: end;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+
+    .budget-page .toolbar-filter {
+        display: flex;
+        align-items: end;
+        gap: 10px;
+        flex-wrap: wrap;
+        padding: 12px 14px;
+        border: 1px solid rgba(148, 163, 184, 0.16);
+        border-radius: 18px;
+        background: linear-gradient(180deg, rgba(248, 250, 252, 0.94), #fff);
+    }
+
+    .budget-page .toolbar-field {
+        min-width: 150px;
+    }
+
+    .budget-page .toolbar-field-wide {
+        min-width: 180px;
+    }
+
+    .budget-page .select2-container.budget-category-select2 .select2-selection--single {
+        min-height: 38px;
+        padding-top: 4px;
+        font-size: 0.93rem;
+    }
+
+    .budget-page .select2-container--default .select2-dropdown.budget-category-select2-dropdown {
+        width: 220px !important;
+        min-width: 220px !important;
+        max-width: 220px !important;
+        font-size: 0.9rem;
+    }
+
+    .budget-page .select2-container--default .budget-category-select2-dropdown .select2-results__option {
+        padding: 6px 10px;
+        line-height: 1.25;
+    }
+
+    .budget-page .select2-container--default .select2-results > .select2-results__options.budget-category-select2-results,
+    .budget-page .budget-category-select2-dropdown .select2-results__options {
+        max-height: 180px !important;
+    }
+
+    @media (max-width: 767.98px) {
+        .budget-page .toolbar-filter,
+        .budget-page .toolbar-actions {
+            width: 100%;
+        }
+
+        .budget-page .toolbar-field,
+        .budget-page .toolbar-field-wide,
+        .budget-page .toolbar-actions .btn {
+            min-width: 100%;
+            width: 100%;
+        }
+    }
+</style>
+
+<div class="content pb-0 budget-page">
+    <div class="toolbar-shell mb-4">
+        <div>
+            <h4 class="mb-1">Budget Planner</h4>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0 p-0">
+                    <li class="breadcrumb-item"><a href="/dashboard">Home</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Budget</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-6 col-xl-3 d-flex">
+            <div class="card flex-fill border-0 rounded-0">
+                <div class="card-body">
+                    <p class="text-muted mb-2">Budget Period</p>
+                    <h5 class="mb-1"><%= summary.periodLabel || "No Period" %></h5>
+                    <small class="text-muted"><%= filters.periodType === "custom" ? "Custom range budget" : "Monthly budget cycle" %></small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-3 d-flex">
+            <div class="card flex-fill border-0 rounded-0">
+                <div class="card-body">
+                    <p class="text-muted mb-2">Budget Limit</p>
+                    <h4 class="mb-1"><%= formatAmount(summary.overallLimit) %></h4>
+                    <small class="text-muted"><%= summary.hasOverallBudget ? "Active spending cap" : `Fallback monthly setting ${formatAmount(monthlyBudgetFallback)}` %></small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-3 d-flex">
+            <div class="card flex-fill border-0 rounded-0">
+                <div class="card-body">
+                    <p class="text-muted mb-2">Spent</p>
+                    <h4 class="mb-1 text-danger"><%= formatAmount(summary.totalSpent) %></h4>
+                    <small class="text-muted"><%= summary.usedPercent.toFixed(0) %>% of limit used</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-3 d-flex">
+            <div class="card flex-fill border-0 rounded-0">
+                <div class="card-body">
+                    <p class="text-muted mb-2">Remaining</p>
+                    <h4 class="mb-1 <%= summary.remaining >= 0 ? "text-success" : "text-danger" %>"><%= formatAmount(summary.remaining) %></h4>
+                    <small class="text-muted"><%= summary.remaining >= 0 ? "Available to spend" : `Over by ${formatAmount(summary.overBudgetAmount)}` %></small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-xl-4 d-flex">
+            <div class="card flex-fill border-0 rounded-0">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h5 class="mb-1">Budget Snapshot</h5>
+                        <p class="text-muted mb-0">Use one budget period at a time, monthly or a custom date range.</p>
+                    </div>
+
+                    <div class="border rounded p-3 mb-3">
+                        <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                            <span class="text-muted">Current Period</span>
+                            <span class="badge bg-light text-dark"><%= filters.periodType === "custom" ? "Custom" : "Monthly" %></span>
+                        </div>
+                        <div class="fw-semibold text-dark mb-1"><%= summary.periodLabel || "No active period selected" %></div>
+                        <small class="text-muted d-block">Overall budget: <%= formatAmount(summary.overallLimit) %></small>
+                        <small class="text-muted d-block">Notes: <%= budget.notes || "No notes added yet" %></small>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-top">
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="text-muted fs-13">Usage Progress</span>
+                            <span class="fw-semibold"><%= summary.usedPercent.toFixed(0) %>%</span>
+                        </div>
+                        <div class="progress progress-sm">
+                            <div class="progress-bar <%= summary.usedPercent >= 100 ? "bg-danger" : summary.usedPercent >= 80 ? "bg-warning" : "bg-success" %>" role="progressbar" style="width: <%= Math.min(summary.usedPercent, 100) %>%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-8 d-flex">
+            <div class="card flex-fill border-0 rounded-0">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                        <div>
+                            <h5 class="mb-1">Category Budget Planner</h5>
+                            <p class="text-muted mb-0">Set a spending cap for any expense category in the selected period.</p>
+                        </div>
+                        <button class="btn btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#addCategoryBudgetModal">+ Category Budget</button>
+                    </div>
+
+                    <div class="table-responsive custom-table table-nowrap">
+                        <table class="table table-nowrap mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Allocated</th>
+                                    <th>Spent</th>
+                                    <th>Remaining</th>
+                                    <th>Used</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% if (!categoryRows.length) { %>
+                                    <tr>
+                                        <td colspan="7" class="text-center py-5 text-muted">
+                                            No expense categories available yet. Add expense categories first.
+                                        </td>
+                                    </tr>
+                                <% } %>
+                                <% categoryRows.forEach((item) => { %>
+                                    <tr>
+                                        <td><%= item.category %></td>
+                                        <td><%= item.limit > 0 ? formatAmount(item.limit) : "-" %></td>
+                                        <td><%= formatAmount(item.spent) %></td>
+                                        <td class="<%= item.remaining >= 0 ? "text-success" : "text-danger" %>"><%= item.limit > 0 ? formatAmount(item.remaining) : "-" %></td>
+                                        <td><%= item.limit > 0 ? `${item.usedPercent.toFixed(0)}%` : "-" %></td>
+                                        <td><span class="badge <%= statusBadgeClass(item.status) %>"><%= item.status %></span></td>
+                                        <td>
+                                            <div class="d-flex gap-2">
+                                                <button class="btn btn-sm btn-light" data-bs-toggle="modal" data-bs-target="#editCategoryBudget-<%= item.category.replace(/[^a-zA-Z0-9]/g, "") %>"><i class="ti ti-edit"></i></button>
+                                                <% if (item.limit > 0) { %>
+                                                    <form action="/budget/category/delete" method="post" class="m-0">
+                                                        <input type="hidden" name="periodType" value="<%= filters.periodType %>">
+                                                        <input type="hidden" name="monthKey" value="<%= filters.month %>">
+                                                        <input type="hidden" name="startDate" value="<%= filters.startDate %>">
+                                                        <input type="hidden" name="endDate" value="<%= filters.endDate %>">
+                                                        <input type="hidden" name="category" value="<%= item.category %>">
+                                                        <button class="btn btn-sm btn-light text-danger" type="submit" onclick="return confirm('Delete this category budget?')"><i class="ti ti-trash"></i></button>
+                                                    </form>
+                                                <% } %>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mt-1">
+        <div class="col-xl-5 d-flex">
+            <div class="card flex-fill border-0 rounded-0">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                        <div>
+                            <h5 class="mb-1">Budget Alerts</h5>
+                            <p class="text-muted mb-0">Alert cards appear when a category is near or over the selected budget.</p>
+                        </div>
+                    </div>
+
+                    <% if (!alertRows.length && summary.remaining >= 0) { %>
+                        <div class="text-center text-muted py-5">
+                            No budget alerts right now. You're in a healthy range for this period.
+                        </div>
+                    <% } %>
+
+                    <% if (summary.overallLimit > 0 && summary.remaining < 0) { %>
+                        <div class="border rounded p-3 mb-3">
+                            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                                <div class="fw-semibold text-dark">Overall Budget</div>
+                                <span class="badge bg-danger-subtle text-danger">Over Budget</span>
+                            </div>
+                            <div class="text-muted fs-13 mb-2">Spent <%= formatAmount(summary.totalSpent) %> of <%= formatAmount(summary.overallLimit) %></div>
+                            <div class="fw-semibold text-danger">Exceeded by <%= formatAmount(summary.overBudgetAmount) %></div>
+                        </div>
+                    <% } %>
+
+                    <% alertRows.forEach((item) => { %>
+                        <div class="border rounded p-3 mb-3">
+                            <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+                                <div class="fw-semibold text-dark"><%= item.category %></div>
+                                <span class="badge <%= statusBadgeClass(item.status) %>"><%= item.status %></span>
+                            </div>
+                            <div class="text-muted fs-13 mb-2">Spent <%= formatAmount(item.spent) %> of <%= formatAmount(item.limit) %></div>
+                            <div class="progress progress-sm">
+                                <div class="progress-bar <%= item.usedPercent >= 100 ? "bg-danger" : "bg-warning" %>" style="width: <%= Math.min(item.usedPercent, 100) %>%"></div>
+                            </div>
+                            <% if (item.remaining < 0) { %>
+                                <div class="fw-semibold text-danger mt-2">Exceeded by <%= formatAmount(Math.abs(item.remaining)) %></div>
+                            <% } %>
+                        </div>
+                    <% }) %>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-7 d-flex">
+            <div class="card flex-fill border-0 rounded-0">
+                <div class="card-body pb-0">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                        <div>
+                            <h5 class="mb-1">Budget vs Expense Trend</h5>
+                            <p class="text-muted mb-0">Recent six-month comparison of planned budget and actual spending.</p>
+                        </div>
+                    </div>
+                    <div id="budget-history-chart"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-1">
+        <div class="col-12 d-flex">
+            <div class="card flex-fill border-0 rounded-0">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h5 class="mb-1">Budget History</h5>
+                        <p class="text-muted mb-0">Compare your budget plan with actual monthly expense performance.</p>
+                    </div>
+
+                    <div class="table-responsive custom-table table-nowrap">
+                        <table class="table table-nowrap mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Month</th>
+                                    <th>Budget</th>
+                                    <th>Spent</th>
+                                    <th>Remaining</th>
+                                    <th>Utilization</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% historyRows.forEach((item) => { %>
+                                    <tr>
+                                        <td><%= item.label %></td>
+                                        <td><%= item.overallLimit > 0 ? formatAmount(item.overallLimit) : "-" %></td>
+                                        <td><%= formatAmount(item.spent) %></td>
+                                        <td class="<%= item.remaining >= 0 ? "text-success" : "text-danger" %>"><%= item.overallLimit > 0 ? formatAmount(item.remaining) : "-" %></td>
+                                        <td><%= item.overallLimit > 0 ? `${item.usedPercent.toFixed(0)}%` : "-" %></td>
+                                        <td><span class="badge <%= statusBadgeClass(item.status) %>"><%= item.status %></span></td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="setBudgetModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="/budget/save" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title">Set Budget</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">Budget Type</label>
+                        <select class="form-select" name="periodType" required>
+                            <option value="monthly" <%= filters.periodType === "monthly" ? "selected" : "" %>>Monthly</option>
+                            <option value="custom" <%= filters.periodType === "custom" ? "selected" : "" %>>Date Range</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">Month</label>
+                        <input type="month" class="form-control" name="monthKey" value="<%= filters.month %>">
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium">Start Date</label>
+                            <input type="date" class="form-control" name="startDate" value="<%= filters.startDate %>">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-medium">End Date</label>
+                            <input type="date" class="form-control" name="endDate" value="<%= filters.endDate %>">
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <label class="form-label fw-medium">Overall Budget Limit</label>
+                        <input type="number" class="form-control" name="overallLimit" min="0" step="0.01" value="<%= budget.overallLimit || 0 %>" required>
+                    </div>
+                    <div class="mt-3">
+                        <label class="form-label fw-medium">Notes</label>
+                        <textarea name="notes" class="form-control" rows="4" placeholder="Salary cycle, event planning, travel, project budget, etc."><%= budget.notes || "" %></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Budget</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="addCategoryBudgetModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <form action="/budget/category/save" method="post">
+                <div class="modal-header">
+                    <h5 class="modal-title">Set Category Budget</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="periodType" value="<%= filters.periodType %>">
+                    <input type="hidden" name="monthKey" value="<%= filters.month %>">
+                    <input type="hidden" name="startDate" value="<%= filters.startDate %>">
+                    <input type="hidden" name="endDate" value="<%= filters.endDate %>">
+                    <div class="mb-2">
+                        <small class="text-muted">Selected period: <%= summary.periodLabel || "Current period" %></small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">Expense Category</label>
+                        <select class="form-select" name="category" required data-budget-category-select>
+                            <option value="">Select Category</option>
+                            <% expenseCategories.forEach((category) => { %>
+                                <option value="<%= category.name %>"><%= category.name %></option>
+                            <% }) %>
+                        </select>
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label fw-medium">Budget Limit</label>
+                        <input type="number" class="form-control" name="limit" min="0" step="0.01" required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<% categoryRows.forEach((item) => { %>
+    <div class="modal fade" id="editCategoryBudget-<%= item.category.replace(/[^a-zA-Z0-9]/g, "") %>" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form action="/budget/category/save" method="post">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Edit Category Budget</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" name="periodType" value="<%= filters.periodType %>">
+                        <input type="hidden" name="monthKey" value="<%= filters.month %>">
+                        <input type="hidden" name="startDate" value="<%= filters.startDate %>">
+                        <input type="hidden" name="endDate" value="<%= filters.endDate %>">
+                        <input type="hidden" name="originalCategory" value="<%= item.category %>">
+                        <div class="mb-2">
+                            <small class="text-muted">Selected period: <%= summary.periodLabel || "Current period" %></small>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-medium">Expense Category</label>
+                            <select class="form-select" name="category" required data-budget-category-select>
+                                <% expenseCategories.forEach((category) => { %>
+                                    <option value="<%= category.name %>" <%= category.name === item.category ? "selected" : "" %>><%= category.name %></option>
+                                <% }) %>
+                            </select>
+                        </div>
+                        <div class="mb-0">
+                            <label class="form-label fw-medium">Budget Limit</label>
+                            <input type="number" class="form-control" name="limit" min="0" step="0.01" value="<%= item.limit %>" required>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Update</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+<% }) %>
+
+<script id="budget-chart-data" type="application/json">
+    <%- JSON.stringify({
+        labels: historyLabels,
+        budgetValues: historyBudgetValues,
+        spentValues: historySpentValues,
+    }) %>
+</script>
+
+<script>
+    window.addEventListener("load", function () {
+        const hasJQuery = typeof window.jQuery !== "undefined";
+        const hasSelect2 = hasJQuery && typeof window.jQuery.fn.select2 === "function";
+
+        if (hasSelect2) {
+            document.querySelectorAll("[data-budget-category-select]").forEach((select) => {
+                const $select = window.jQuery(select);
+                const dropdownParent = select.closest(".modal, .offcanvas, .card, .content") || document.body;
+                $select.select2({
+                    width: "100%",
+                    minimumResultsForSearch: Infinity,
+                    dropdownParent: window.jQuery(dropdownParent),
+                    dropdownCssClass: "budget-category-select2-dropdown",
+                    containerCssClass: "budget-category-select2"
+                });
+            });
+        }
+
+        if (typeof ApexCharts === "undefined") {
+            return;
+        }
+
+        const chartDataEl = document.querySelector("#budget-chart-data");
+        const chartEl = document.querySelector("#budget-history-chart");
+        if (!chartDataEl || !chartEl) {
+            return;
+        }
+
+        const chartData = JSON.parse(chartDataEl.textContent || "{}");
+
+        new ApexCharts(chartEl, {
+            chart: {
+                type: "bar",
+                height: 320,
+                toolbar: { show: false }
+            },
+            series: [
+                { name: "Budget", data: chartData.budgetValues || [] },
+                { name: "Spent", data: chartData.spentValues || [] }
+            ],
+            colors: ["#0d6efd", "#dc3545"],
+            plotOptions: {
+                bar: {
+                    horizontal: false,
+                    borderRadius: 6,
+                    columnWidth: "48%"
+                }
+            },
+            dataLabels: { enabled: false },
+            stroke: { show: false },
+            xaxis: {
+                categories: chartData.labels || [],
+            },
+            yaxis: {
+                labels: {
+                    formatter: (value) => "Rs. " + Number(value || 0).toLocaleString("en-IN")
+                }
+            },
+            grid: {
+                borderColor: "#e9ecef"
+            },
+            legend: {
+                position: "top"
+            }
+        }).render();
+    });
+</script>
+
+<%- include("../partials/footer.ejs")%>

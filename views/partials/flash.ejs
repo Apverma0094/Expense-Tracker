@@ -1,0 +1,215 @@
+<%
+const safeSuccessMessages = typeof success_msg === "undefined" ? [] : success_msg;
+const safeErrorMessages = typeof error_msg === "undefined" ? [] : error_msg;
+
+const successMessages = Array.isArray(safeSuccessMessages)
+    ? safeSuccessMessages
+    : safeSuccessMessages
+        ? [safeSuccessMessages]
+        : [];
+
+const errorMessages = Array.isArray(safeErrorMessages)
+    ? safeErrorMessages
+    : safeErrorMessages
+        ? [safeErrorMessages]
+        : [];
+
+const toastMessages = [
+    ...successMessages.map((message) => ({
+        type: "success",
+        title: "Success",
+        message,
+    })),
+    ...errorMessages.map((message) => ({
+        type: "error",
+        title: "Error",
+        message,
+    })),
+];
+%>
+
+<% if (toastMessages.length > 0) { %>
+    <div class="toast-stack" aria-live="polite" aria-atomic="true">
+        <% toastMessages.forEach((toast) => { %>
+            <div class="app-toast app-toast-<%= toast.type %>" data-flash-toast role="<%= toast.type === 'error' ? 'alert' : 'status' %>">
+                <div class="toast-badge toast-badge-<%= toast.type %>">
+                    <span></span>
+                </div>
+                <div class="toast-copy">
+                    <strong><%= toast.title %></strong>
+                    <p><%= toast.message %></p>
+                </div>
+                <button type="button" class="toast-close" aria-label="Dismiss notification" data-toast-close>
+                    ×
+                </button>
+            </div>
+        <% }) %>
+    </div>
+
+    <style>
+        .toast-stack {
+            position: fixed;
+            top: 24px;
+            right: 24px;
+            z-index: 1080;
+            width: min(100%, 380px);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            pointer-events: none;
+        }
+
+        .app-toast {
+            pointer-events: auto;
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            padding: 16px 18px;
+            border-radius: 18px;
+            background: rgba(255, 255, 255, 0.92);
+            border: 1px solid rgba(226, 232, 240, 0.9);
+            box-shadow: 0 20px 60px rgba(15, 23, 42, 0.14);
+            backdrop-filter: blur(18px);
+            opacity: 0;
+            transform: translateY(-12px) scale(0.98);
+            transition: opacity 0.24s ease, transform 0.24s ease;
+        }
+
+        .app-toast.is-visible {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+
+        .app-toast.is-hiding {
+            opacity: 0;
+            transform: translateY(-12px) scale(0.98);
+        }
+
+        .app-toast-success {
+            border-left: 4px solid #16a34a;
+        }
+
+        .app-toast-error {
+            border-left: 4px solid #dc2626;
+        }
+
+        .toast-badge {
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+        }
+
+        .toast-badge span {
+            width: 10px;
+            height: 10px;
+            border-radius: 999px;
+            display: block;
+        }
+
+        .toast-badge-success {
+            background: rgba(22, 163, 74, 0.12);
+        }
+
+        .toast-badge-success span {
+            background: #16a34a;
+        }
+
+        .toast-badge-error {
+            background: rgba(220, 38, 38, 0.12);
+        }
+
+        .toast-badge-error span {
+            background: #dc2626;
+        }
+
+        .toast-copy {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .toast-copy strong {
+            display: block;
+            margin-bottom: 4px;
+            color: #0f172a;
+            font-size: 0.96rem;
+            font-weight: 800;
+        }
+
+        .toast-copy p {
+            margin: 0;
+            color: #475569;
+            font-size: 0.92rem;
+            line-height: 1.45;
+            word-break: break-word;
+        }
+
+        .toast-close {
+            border: 0;
+            background: transparent;
+            color: #94a3b8;
+            font-size: 1.35rem;
+            line-height: 1;
+            padding: 0;
+            margin-top: -2px;
+            cursor: pointer;
+        }
+
+        .toast-close:hover {
+            color: #0f172a;
+        }
+
+        @media (max-width: 575.98px) {
+            .toast-stack {
+                top: 12px;
+                right: 12px;
+                left: 12px;
+                width: auto;
+            }
+        }
+    </style>
+
+    <script>
+        (function () {
+            const toasts = Array.from(document.querySelectorAll('[data-flash-toast]'));
+
+            if (!toasts.length) {
+                return;
+            }
+
+            function hideToast(toast) {
+                if (!toast || toast.classList.contains('is-hiding')) {
+                    return;
+                }
+
+                toast.classList.add('is-hiding');
+                toast.addEventListener('transitionend', function handleTransitionEnd() {
+                    toast.removeEventListener('transitionend', handleTransitionEnd);
+                    toast.remove();
+                });
+            }
+
+            toasts.forEach(function (toast, index) {
+                const closeButton = toast.querySelector('[data-toast-close]');
+
+                window.setTimeout(function () {
+                    toast.classList.add('is-visible');
+                }, 20 + (index * 90));
+
+                const hideTimer = window.setTimeout(function () {
+                    hideToast(toast);
+                }, 4200 + (index * 450));
+
+                if (closeButton) {
+                    closeButton.addEventListener('click', function () {
+                        window.clearTimeout(hideTimer);
+                        hideToast(toast);
+                    });
+                }
+            });
+        })();
+    </script>
+<% } %>

@@ -1,0 +1,295 @@
+6. Financial Management Modules
+
+The source code contains dedicated modules for handling different financial operations. In this project, separate controllers and views are used for transactions, wallets, budgets, and reminders. This modular structure improves code reusability, keeps business logic organized, and simplifies future enhancements.
+
+Modules included:
+- Transaction Module
+- Wallet Module
+- Budget Module
+- Reminder Module
+
+1. Transaction Module
+Responsible for:
+- Adding transactions
+- Updating transactions
+- Deleting transactions
+- Viewing transaction history
+
+Sample controller code for transaction validation and creation:
+
+```js
+function normalizeTransactionPayload(body) {
+    const amount = Number(body.amount);
+    const title = String(body.title || "").trim();
+    const category = String(body.category || "").trim();
+    const wallet = String(body.wallet || "").trim();
+    const type = String(body.type || "").trim().toLowerCase();
+
+    return {
+        title,
+        category,
+        wallet,
+        type,
+        amount,
+        description: String(body.description || body.note || "").trim(),
+        transactionDate: body.transactionDate || body.date
+            ? new Date(body.transactionDate || body.date)
+            : new Date(),
+    };
+}
+
+async function addTransaction(req, res) {
+    const payload = normalizeTransactionPayload(req.body);
+
+    await createTransaction({
+        userId: req.session.userId,
+        ...payload,
+    });
+
+    req.flash("success_msg", "Transaction Added Successfully");
+    return res.redirect("/transactions");
+}
+```
+
+Sample code for viewing transaction history in EJS:
+
+```ejs
+<% transactions.forEach((transaction) => { %>
+  <tr>
+    <td><%= transaction.title %></td>
+    <td><%= transaction.category %></td>
+    <td><%= transaction.wallet %></td>
+    <td><%= transaction.type %></td>
+    <td>Rs. <%= transaction.amount %></td>
+  </tr>
+<% }) %>
+```
+
+Sample update/delete route behavior:
+
+```js
+async function updateTransaction(req, res) {
+    const payload = normalizeTransactionPayload(req.body);
+    await updateUserTransaction(req.session.userId, req.params.id, payload);
+    req.flash("success_msg", "Transaction updated successfully");
+    return res.redirect("/transactions");
+}
+
+async function deleteTransaction(req, res) {
+    await deleteUserTransaction(req.session.userId, req.params.id);
+    req.flash("success_msg", "Transaction deleted successfully");
+    return res.redirect("/transactions");
+}
+```
+
+2. Wallet Module
+Responsible for:
+- Wallet creation
+- Balance management
+- Fund transfers
+
+Sample wallet creation logic:
+
+```js
+function normalizeWalletPayload(body) {
+    return {
+        name: String(body.name || body.walletName || "").trim(),
+        type: String(body.type || "").trim().toLowerCase(),
+        currency: String(body.currency || "INR").trim().toUpperCase(),
+        openingBalance: Number(body.openingBalance),
+        openingBalanceDate: body.openingBalanceDate
+            ? new Date(body.openingBalanceDate)
+            : new Date(),
+        notes: String(body.notes || body.note || "").trim(),
+    };
+}
+
+async function addWallet(req, res) {
+    const payload = normalizeWalletPayload(req.body);
+
+    await createWallet({
+        userId: req.session.userId,
+        ...payload,
+    });
+
+    req.flash("success_msg", "Wallet added successfully");
+    return res.redirect("/wallet");
+}
+```
+
+Sample balance management logic:
+
+```js
+function buildWalletViewModel(wallets, transactionStats, transferStats) {
+    return wallets.map((wallet) => {
+        const tx = transactionStats[wallet.name] || {};
+        const transfer = transferStats[wallet.name] || {};
+        const openingBalance = Number(wallet.openingBalance || 0);
+        const income = Number(tx.income || 0);
+        const expense = Number(tx.expense || 0);
+        const incomingTransfers = Number(transfer.incomingAmount || 0);
+        const outgoingTransfers = Number(transfer.outgoingAmount || 0);
+
+        return {
+            ...wallet,
+            balance: openingBalance + income + incomingTransfers - expense - outgoingTransfers,
+        };
+    });
+}
+```
+
+Sample fund transfer validation:
+
+```js
+function validateTransferPayload(payload, walletNames) {
+    if (!payload.fromWallet || !payload.toWallet) {
+        return "Please select both wallets";
+    }
+
+    if (payload.fromWallet === payload.toWallet) {
+        return "Transfer wallets must be different";
+    }
+
+    if (!Number.isFinite(payload.amount) || payload.amount <= 0) {
+        return "Transfer amount must be greater than 0";
+    }
+
+    return null;
+}
+```
+
+Sample wallet table in EJS:
+
+```ejs
+<% wallets.forEach((wallet) => { %>
+  <tr>
+    <td><%= wallet.name %></td>
+    <td><%= wallet.typeLabel %></td>
+    <td><%= wallet.currency %></td>
+    <td>Rs. <%= wallet.balance %></td>
+  </tr>
+<% }) %>
+```
+
+3. Budget Module
+Responsible for:
+- Budget creation
+- Budget tracking
+- Spending analysis
+
+Sample budget creation and normalization:
+
+```js
+function normalizeBudgetPayload(body) {
+    return {
+        periodType: body.periodType,
+        monthKey: body.monthKey,
+        startDate: body.startDate,
+        endDate: body.endDate,
+        overallLimit: Number(body.overallLimit || 0),
+        notes: String(body.notes || "").trim(),
+    };
+}
+
+async function saveBudget(req, res) {
+    const payload = normalizeBudgetPayload(req.body);
+    await upsertUserBudget(req.session.userId, payload);
+    req.flash("success_msg", "Budget saved successfully");
+    return res.redirect("/budget");
+}
+```
+
+Sample budget tracking and spending analysis:
+
+```js
+const totalSpent = expenseTransactions.reduce((sum, item) => sum + Number(item.amount || 0), 0);
+const overallLimit = Number(budgetDoc?.overallLimit || 0);
+const remaining = overallLimit - totalSpent;
+const usedPercent = overallLimit > 0 ? (totalSpent / overallLimit) * 100 : 0;
+```
+
+Sample budget status in EJS:
+
+```ejs
+<div class="card p-3">
+  <h5>Budget Snapshot</h5>
+  <p>Total Limit: Rs. <%= summary.overallLimit %></p>
+  <p>Spent: Rs. <%= summary.totalSpent %></p>
+  <p>Remaining: Rs. <%= summary.remaining %></p>
+  <div class="progress">
+    <div class="progress-bar" style="width: <%= Math.min(summary.usedPercent, 100) %>%"></div>
+  </div>
+</div>
+```
+
+4. Reminder Module
+Responsible for:
+- Reminder scheduling
+- Due-date monitoring
+- Notification triggering
+
+Sample reminder scheduling logic:
+
+```js
+function parseDateInput(value) {
+    const raw = String(value || "").trim();
+    if (!raw) {
+        return null;
+    }
+
+    const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) {
+        return null;
+    }
+
+    return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 12, 0, 0, 0);
+}
+```
+
+Sample due-date monitoring logic:
+
+```js
+function compareDates(dateValue, todayKey) {
+    const dateKey = getDateKey(dateValue);
+
+    if (dateKey === todayKey) {
+        return "due-today";
+    }
+
+    return dateKey < todayKey ? "overdue" : "upcoming";
+}
+```
+
+Sample notification/status triggering logic:
+
+```js
+function getReminderDisplayState(reminder, todayKey) {
+    const dueState = compareDates(reminder.dueDate, todayKey);
+
+    if (dueState === "due-today") {
+        return { displayStatus: "Due Today", lifecycleStatus: "due-today" };
+    }
+
+    if (dueState === "overdue") {
+        return { displayStatus: "Overdue", lifecycleStatus: "overdue" };
+    }
+
+    return { displayStatus: "Upcoming", lifecycleStatus: "upcoming" };
+}
+```
+
+Sample reminder listing in EJS:
+
+```ejs
+<% reminders.forEach((reminder) => { %>
+  <tr>
+    <td><%= reminder.title %></td>
+    <td><%= reminder.category %></td>
+    <td><%= reminder.dueDateText %></td>
+    <td><span class="badge <%= reminder.badgeClass %>"><%= reminder.displayStatus %></span></td>
+  </tr>
+<% }) %>
+```
+
+5. Conclusion
+The financial management layer of the project is implemented through separate modules for transactions, wallets, budgets, and reminders. Each module contains focused business logic and related UI rendering, which makes the application easier to maintain, extend, and reuse in future development.
