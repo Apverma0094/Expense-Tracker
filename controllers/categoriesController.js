@@ -92,7 +92,7 @@ async function showCategoriesPage(req, res) {
             : seededCategories;
         const usage = await getUserCategoryUsage(req.session.userId);
 
-        return res.render("categories/categories", {
+        return res.render("panels/categories", {
             categories: categories.map((category) => ({
                 ...category,
                 usageCount: usage[category.name] || 0,
@@ -100,6 +100,7 @@ async function showCategoriesPage(req, res) {
             })),
             filters,
             iconOptions: CATEGORY_ICON_OPTIONS,
+            pageStyles: ["assets2/css/categories.css"],
         });
 
     } catch (error) {

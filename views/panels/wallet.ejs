@@ -1,0 +1,158 @@
+<%- include("../partials/header.ejs") %>
+
+    <%- include("../partials/sidebar.ejs") %>
+
+        <div class="content pb-0">
+
+            <div class="d-flex align-items-center justify-content-between gap-2 mb-4 flex-wrap">
+                <div>
+                    <h4 class="mb-1">Wallets<span class="badge badge-soft-primary ms-2"><%= meta.totalWallets %></span></h4>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb mb-0 p-0">
+                            <li class="breadcrumb-item"><a href="/dashboard">Home</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Wallets</li>
+                        </ol>
+                    </nav>
+                </div>
+                <div class="gap-2 d-flex align-items-center flex-wrap">
+                    <a href="/wallet" class="btn btn-icon btn-outline-light shadow" data-bs-toggle="tooltip"
+                        data-bs-placement="top" aria-label="Refresh" data-bs-original-title="Refresh"><i
+                            class="ti ti-refresh"></i></a>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-6 d-flex">
+                    <div class="card flex-fill border-0 rounded-0">
+                        <div class="card-body">
+                            <p class="text-muted mb-2">Total Wallet Balance</p>
+                            <h4 class="mb-0 text-primary"><%= formatAmount(meta.totalBalance) %></h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 d-flex">
+                    <div class="card flex-fill border-0 rounded-0">
+                        <div class="card-body">
+                            <p class="text-muted mb-2">Active Wallets</p>
+                            <h4 class="mb-0"><%= walletOptions.length %></h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 rounded-0">
+                <div class="card-body">
+
+                    <form action="/wallet" method="get" class="page-filter-shell mb-4">
+                        <div class="page-filter-left">
+                            <div class="page-filter-group">
+                                <select class="form-select page-filter-field" name="type">
+                                    <option value="">All Wallet Types</option>
+                                    <option value="bank" <%= filters.type === "bank" ? "selected" : "" %>>Bank</option>
+                                    <option value="cash" <%= filters.type === "cash" ? "selected" : "" %>>Cash</option>
+                                    <option value="digital" <%= filters.type === "digital" ? "selected" : "" %>>Digital</option>
+                                </select>
+
+                                <select class="form-select page-filter-field" name="currency">
+                                    <option value="">All Currencies</option>
+                                    <% meta.currencies.forEach((currency) => { %>
+                                        <option value="<%= currency %>" <%= filters.currency === currency ? "selected" : "" %>><%= currency %></option>
+                                    <% }) %>
+                                </select>
+                            </div>
+
+                            <div class="page-filter-actions">
+                                <input type="text" class="form-control page-filter-search" name="search" value="<%= filters.search %>"
+                                    placeholder="Search wallets...">
+                                <button type="submit" class="btn btn-outline-light shadow">Filter</button>
+                                <a href="/wallet" class="btn btn-outline-light shadow">Clear</a>
+                            </div>
+                        </div>
+
+                        <div class="page-filter-cta">
+                            <button type="button" class="btn btn-primary" data-bs-toggle="offcanvas"
+                                data-bs-target="#addWallet">
+                                + Add Wallet
+                            </button>
+                            <button type="button" class="btn btn-outline-light shadow" data-bs-toggle="offcanvas"
+                                data-bs-target="#transferWallet">
+                                <i class="ti ti-arrows-transfer-up-down me-2"></i>Transfer
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="table-responsive table-nowrap custom-table">
+                        <table class="table table-nowrap" id="walletTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Wallet</th>
+                                    <th>Type</th>
+                                    <th>Balance</th>
+                                    <th>Currency</th>
+                                    <th>Transactions</th>
+                                    <th>Transfers</th>
+                                    <th class="no-sort">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% if (!wallets.length) { %>
+                                    <tr>
+                                        <td colspan="7" class="text-center py-5 text-muted">
+                                            No wallets found. Add your first wallet to start tracking balances.
+                                        </td>
+                                    </tr>
+                                <% } %>
+
+                                <% wallets.forEach((wallet) => { %>
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <span class="avatar avatar-sm rounded-circle <%= wallet.badgeClass %> border-0">
+                                                    <i class="<%= wallet.iconClass %> fs-16"></i>
+                                                </span>
+                                                <%= wallet.name %>
+                                            </div>
+                                        </td>
+                                        <td><span class="badge <%= wallet.badgeClass %>"><%= wallet.typeLabel %></span></td>
+                                        <td><%= formatAmount(wallet.balance, wallet.currency) %></td>
+                                        <td><span class="badge bg-light text-dark"><%= wallet.currency %></span></td>
+                                        <td><%= wallet.transactionCount %></td>
+                                        <td><%= wallet.transferCount %></td>
+                                        <td>
+                                            <div class="d-flex gap-2">
+                                                <button class="btn btn-sm btn-light" data-bs-toggle="offcanvas"
+                                                    data-bs-target="#walletView-<%= wallet._id %>">
+                                                    <i class="ti ti-chart-bar"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-light" data-bs-toggle="offcanvas"
+                                                    data-bs-target="#editWallet-<%= wallet._id %>">
+                                                    <i class="ti ti-edit"></i>
+                                                </button>
+                                                <form action="/wallet/<%= wallet._id %>/delete" method="post" class="m-0">
+                                                    <button class="btn btn-sm btn-light text-danger" type="submit"
+                                                        onclick="return confirm('Delete this wallet?')">
+                                                        <i class="ti ti-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+
+        <% wallets.forEach((wallet) => { %>
+            <%- include("../partials/wallet/wallet-view.ejs", { wallet }) %>
+            <%- include("../partials/wallet/wallet-edit.ejs", { wallet }) %>
+        <% }) %>
+
+        <%- include("../partials/wallet/wallet-add.ejs") %>
+        <%- include("../partials/wallet/wallet-transfer.ejs") %>
+
+        <%- include("../partials/footer.ejs")%>

@@ -131,11 +131,12 @@ function buildBudgetStatus(limit, spent) {
     const safeLimit = Number(limit || 0);
     const safeSpent = Number(spent || 0);
     const usedPercent = safeLimit > 0 ? (safeSpent / safeLimit) * 100 : 0;
+    const hasBudget = safeLimit > 0;
 
     return {
-        usedPercent: safeLimit > 0 ? Math.min(usedPercent, 100) : 0,
-        remaining: safeLimit - safeSpent,
-        status: safeLimit <= 0
+        usedPercent: hasBudget ? Math.min(usedPercent, 100) : 0,
+        remaining: hasBudget ? (safeLimit - safeSpent) : 0,
+        status: !hasBudget
             ? "Not Set"
             : safeSpent > safeLimit
                 ? "Over"

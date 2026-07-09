@@ -1,0 +1,55 @@
+<div class="offcanvas offcanvas-end offcanvas-large" tabindex="-1" id="transferWallet">
+    <div class="offcanvas-header border-bottom">
+        <div>
+            <h5 class="mb-0 fw-bold">Transfer Between Wallets</h5>
+            <small class="text-muted">Move money from one wallet to another</small>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+
+    <div class="offcanvas-body">
+        <form action="/wallet/transfer" method="post">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-medium">From Wallet</label>
+                    <select class="form-select" name="fromWallet" required>
+                        <option selected disabled value="">Select Wallet</option>
+                        <% walletOptions.forEach((wallet) => { %>
+                            <option value="<%= wallet.name %>"><%= wallet.name %></option>
+                        <% }) %>
+                    </select>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-medium">To Wallet</label>
+                    <select class="form-select" name="toWallet" required>
+                        <option selected disabled value="">Select Wallet</option>
+                        <% walletOptions.forEach((wallet) => { %>
+                            <option value="<%= wallet.name %>"><%= wallet.name %></option>
+                        <% }) %>
+                    </select>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-medium">Amount</label>
+                    <input type="number" step="0.01" min="0" name="amount" class="form-control"
+                        placeholder="0.00" required>
+                </div>
+
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-medium">Date</label>
+                    <input type="date" name="transferDate" class="form-control" required>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label fw-medium">Note</label>
+                <textarea class="form-control" name="note" rows="3" placeholder="Reason for transfer..."></textarea>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 py-3 fw-semibold">
+                <i class="ti ti-arrows-transfer-up-down me-2"></i>Transfer Amount
+            </button>
+        </form>
+    </div>
+</div>

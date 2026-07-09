@@ -161,9 +161,9 @@ async function showAnalyticsPage(req, res) {
         const totalExpense = yearTransactions
             .filter((transaction) => transaction.type === "expense")
             .reduce((sum, transaction) => sum + Number(transaction.amount || 0), 0);
-        const totalBalance = totalIncome - totalExpense;
+        const netFlow = totalIncome - totalExpense;
         const savingsRate = totalIncome > 0
-            ? ((totalBalance / totalIncome) * 100)
+            ? ((netFlow / totalIncome) * 100)
             : 0;
         const averageExpense = yearTransactions.filter((transaction) => transaction.type === "expense").length
             ? totalExpense / yearTransactions.filter((transaction) => transaction.type === "expense").length
@@ -171,8 +171,20 @@ async function showAnalyticsPage(req, res) {
         const recentTransactions = [...transactions]
             .sort((a, b) => new Date(b.transactionDate) - new Date(a.transactionDate))
             .slice(0, 6);
+        const visibleWalletBalances = walletBalances
+            .filter((wallet) => wallet.balance !== 0)
+            .sort((a, b) => b.balance - a.balance);
+        const totalWalletBalance = visibleWalletBalances.reduce((sum, wallet) => sum + Number(wallet.balance || 0), 0);
+        const topCategory = categoryBreakdown[0] || null;
+        const strongestMonth = monthlyOverview.reduce((best, month) => (
+            !best || Number(month.balance || 0) > Number(best.balance || 0) ? month : best
+        ), null);
+        const topExpenseMonths = [...monthlyOverview]
+            .filter((item) => Number(item.expense || 0) > 0)
+            .sort((a, b) => Number(b.expense || 0) - Number(a.expense || 0))
+            .slice(0, 5);
 
-        return res.render("analytics/analytics", {
+        return res.render("panels/analytics", {
             filters: {
                 year: selectedYear,
             },
@@ -180,7 +192,8 @@ async function showAnalyticsPage(req, res) {
                 years: years.length ? years : [currentYear],
                 totalIncome,
                 totalExpense,
-                totalBalance,
+                totalBalance: totalWalletBalance,
+                netFlow,
                 savingsRate,
                 averageExpense,
                 transactionCount: yearTransactions.length,
@@ -190,10 +203,29 @@ async function showAnalyticsPage(req, res) {
             monthlyOverview,
             monthlyTransactionCounts,
             categoryBreakdown,
-            walletBalances: walletBalances
-                .filter((wallet) => wallet.balance !== 0)
-                .sort((a, b) => b.balance - a.balance),
+            walletBalances: visibleWalletBalances,
             recentTransactions,
+            totalWalletBalance,
+            topCategory,
+            strongestMonth,
+            pageScripts: ["assets2/js/analytics.js"],
+            chartData: {
+                monthLabels: monthlyOverview.map((item) => item.label),
+                monthIncome: monthlyOverview.map((item) => Number(item.income || 0)),
+                monthExpense: monthlyOverview.map((item) => Number(item.expense || 0)),
+                monthBalance: monthlyOverview.map((item) => Number(item.balance || 0)),
+                monthlyTransactionSeries: monthlyTransactionCounts.map((item) => Number(item.count || 0)),
+                categoryLabels: categoryBreakdown.length ? categoryBreakdown.slice(0, 6).map((item) => item.category) : ["No Data"],
+                categoryValues: categoryBreakdown.length ? categoryBreakdown.slice(0, 6).map((item) => Number(item.amount || 0)) : [0],
+                incomeExpenseSplitLabels: ["Income", "Expense"],
+                incomeExpenseSplit: [Number(totalIncome || 0), Number(totalExpense || 0)].some((value) => value > 0)
+                    ? [Number(totalIncome || 0), Number(totalExpense || 0)]
+                    : [1, 1],
+                topExpenseMonthLabels: topExpenseMonths.length ? topExpenseMonths.map((item) => item.label) : ["No Data"],
+                topExpenseMonthValues: topExpenseMonths.length ? topExpenseMonths.map((item) => Number(item.expense || 0)) : [0],
+                walletLabels: visibleWalletBalances.length ? visibleWalletBalances.map((item) => item.name) : ["No Wallets"],
+                walletValues: visibleWalletBalances.length ? visibleWalletBalances.map((item) => Number(item.balance || 0)) : [1],
+            },
         });
     } catch (error) {
         console.error(error);

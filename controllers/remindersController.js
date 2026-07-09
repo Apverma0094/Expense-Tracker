@@ -14,7 +14,11 @@ const {
 const {
     getUserWallets,
     findUserWalletByName,
+    getUserWalletTransactionStats,
 } = require("../collections/wallets");
+const {
+    getUserWalletTransferStats,
+} = require("../collections/walletTransfers");
 const {
     findUserCategoryByName,
     createCategory,
@@ -23,6 +27,11 @@ const {
     findUserById,
     buildDefaultUserSettings,
 } = require("../collections/users");
+const {
+    buildWalletBalanceMap,
+    applyTransactionToWalletBalanceMap,
+    getNegativeWallets,
+} = require("../utils/walletBalance");
 
 function parseDateInput(value) {
     const raw = String(value || "").trim();
@@ -262,6 +271,30 @@ function buildReminderView(reminder, todayKey) {
         titleText: reminder.title || reminder.personName || "Untitled",
         categoryLabel: categoryLabel(reminder.category),
         tabKey: tabKeyForCategory(reminder.category),
+        actionLabel: reminder.category === "borrowed"
+            ? "Mark Returned"
+            : reminder.category === "lent"
+                ? "Mark Received"
+                : reminder.category === "task"
+                    ? "Mark Complete"
+                    : "Mark as Paid",
+        actionPath: reminder.category === "borrowed"
+            ? `/reminders/${reminder._id}/mark-returned`
+            : reminder.category === "lent"
+                ? `/reminders/${reminder._id}/mark-received`
+                : reminder.category === "task"
+                    ? `/reminders/${reminder._id}/mark-complete`
+                    : `/reminders/${reminder._id}/mark-paid`,
+        dueLabel: reminder.category === "borrowed"
+            ? "Return Date"
+            : reminder.category === "lent"
+                ? "Expected Return"
+                : "Due Date",
+        dateDetails: reminder.category === "borrowed"
+            ? `Borrowed ${formatInputDate(reminder.borrowDate) || "-"} | Return ${formatInputDate(reminder.dueDate) || "-"}`
+            : reminder.category === "lent"
+                ? `Given ${formatInputDate(reminder.givenDate) || "-"} | Return ${formatInputDate(reminder.dueDate) || "-"}`
+                : dueDateText,
         dueDateKey: getDateKey(reminder.dueDate),
         dueDateText,
         borrowDateText,
@@ -582,7 +615,7 @@ async function createExpenseFromReminder(userId, reminder) {
 
     const category = await ensureExpenseCategory(userId, reminder.category);
 
-    await createTransaction({
+    const nextTransaction = {
         userId,
         title: `${reminder.title} Paid`,
         category,
@@ -594,7 +627,21 @@ async function createExpenseFromReminder(userId, reminder) {
         billImageData: "",
         billImageName: "",
         billImageMime: "",
-    });
+    };
+    const [wallets, walletTransactionStats, walletTransferStats] = await Promise.all([
+        getUserWallets(userId),
+        getUserWalletTransactionStats(userId),
+        getUserWalletTransferStats(userId),
+    ]);
+    const balanceMap = buildWalletBalanceMap(wallets, walletTransactionStats, walletTransferStats);
+
+    applyTransactionToWalletBalanceMap(balanceMap, nextTransaction, 1);
+
+    if (getNegativeWallets(balanceMap).length) {
+        throw new Error("Insufficient balance in the selected wallet");
+    }
+
+    await createTransaction(nextTransaction);
 }
 
 async function showRemindersPage(req, res) {
@@ -618,17 +665,36 @@ async function showRemindersPage(req, res) {
         const selectedDateKey = calendar.eventsByDate[todayKey]
             ? todayKey
             : Object.keys(calendar.eventsByDate)[0] || "";
+        const selectedDateLabelText = selectedDateKey
+            ? new Date(`${selectedDateKey}T12:00:00`).toLocaleDateString("en-GB", {
+                day: "2-digit",
+                month: "long",
+                year: "numeric",
+            })
+            : "No scheduled reminders";
+        const tabMeta = [
+            { key: "emi-bills", label: "EMI & Bills", count: tabs.emiBills.length, active: filters.tab === "emi-bills" },
+            { key: "borrowed", label: "Borrowed Money", count: tabs.borrowed.length, active: filters.tab === "borrowed" },
+            { key: "lent", label: "Lent Money", count: tabs.lent.length, active: filters.tab === "lent" },
+            { key: "tasks", label: "Personal Tasks", count: tabs.tasks.length, active: filters.tab === "tasks" },
+        ];
 
-        return res.render("reminders/reminders", {
+        return res.render("panels/reminders", {
             reminders: filteredReminders,
             tabs,
             summary,
             filters,
             calendar,
             selectedDateKey,
+            selectedDateLabelText,
+            tabMeta,
+            dayNames: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+            calendarEventsJson: JSON.stringify(calendar.eventsByDate),
             walletOptions: wallets,
             defaultWallet: settings.preferences.defaultWallet || (wallets[0]?.name || ""),
             hasWallets: wallets.length > 0,
+            pageStyles: ["assets2/css/reminders.css"],
+            pageScripts: ["assets2/js/reminders.js"],
         });
     } catch (error) {
         console.error(error);

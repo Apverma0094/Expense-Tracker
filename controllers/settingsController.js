@@ -61,11 +61,27 @@ async function showSettingsPage(req, res) {
             getUserWallets(req.session.userId),
         ]);
         const settings = buildDefaultUserSettings(user || {});
+        const profileDisplayName = settings.profile.fullName || user?.email || "Expense Tracker Profile";
+        const profileView = {
+            profileImage: settings.profile.profileImage || "",
+            profileDisplayName,
+            profileInitials: profileDisplayName
+                .split(/\s+/)
+                .filter(Boolean)
+                .slice(0, 2)
+                .map((part) => part[0]?.toUpperCase() || "")
+                .join("") || "ET",
+            budgetStatus: settings.notifications.budgetAlert ? "On" : "Off",
+            walletStatus: settings.preferences.defaultWallet || "Not selected",
+            budgetLimitValue: Number(settings.preferences.monthlyBudgetLimit || 0),
+        };
 
-        res.render("profile/settings", {
+        res.render("panels/settings", {
             user: user || {},
             settings,
             wallets,
+            profileView,
+            pageStyles: ["assets2/css/settings.css"],
         });
     } catch (error) {
         console.error(error);

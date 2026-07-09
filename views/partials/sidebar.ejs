@@ -1,6 +1,40 @@
 <!--=========================
                   Sidenav Menu Start 
              ============================-->
+<%
+function isSidebarRouteActive(route) {
+    const path = currentPath || "/";
+
+    return path === route || path.startsWith(`${route}/`);
+}
+
+function sidebarLinkStyle(isActive) {
+    return isActive
+        ? "background: var(--danger-transparent); border-radius: 6px; color: var(--primary);"
+        : "";
+}
+
+function sidebarIconStyle(isActive) {
+    return isActive
+        ? "color: #fff; background-color: var(--primary);"
+        : "";
+}
+
+function sidebarTextStyle(isActive) {
+    return isActive
+        ? "color: var(--primary);"
+        : "";
+}
+
+const dashboardActive = isSidebarRouteActive("/dashboard");
+const transactionsActive = isSidebarRouteActive("/transactions");
+const categoriesActive = isSidebarRouteActive("/categories");
+const analyticsActive = isSidebarRouteActive("/analytics");
+const walletActive = isSidebarRouteActive("/wallet");
+const remindersActive = isSidebarRouteActive("/reminders");
+const budgetActive = isSidebarRouteActive("/budget");
+const settingsActive = isSidebarRouteActive("/settings");
+%>
 <div class="sidebar" id="sidebar">
 
     <!-- Start Logo -->
@@ -39,44 +73,44 @@
                 <li class="menu-title"><span>Main Menu</span></li>
                 <li>
                     <ul>
-                        <li class="">
-                            <a href="/dashboard">
-                                <i class="ti ti-dashboard"></i><span>Dashboard</span>
+                        <li class="<%= dashboardActive ? 'active menu-item-current' : '' %>">
+                            <a href="/dashboard" class="<%= dashboardActive ? 'active menu-link-current' : '' %>" style="<%= sidebarLinkStyle(dashboardActive) %>">
+                                <i class="ti ti-layout-dashboard" style="<%= sidebarIconStyle(dashboardActive) %>"></i><span style="<%= sidebarTextStyle(dashboardActive) %>">Dashboard</span>
                             </a>
                         </li>
-                        <li class="">
-                            <a href="/transactions"><i class="ti ti-brand-airtable"></i><span>Transactions</span>
+                        <li class="<%= transactionsActive ? 'active menu-item-current' : '' %>">
+                            <a href="/transactions" class="<%= transactionsActive ? 'active menu-link-current' : '' %>" style="<%= sidebarLinkStyle(transactionsActive) %>"><i class="ti ti-receipt-2" style="<%= sidebarIconStyle(transactionsActive) %>"></i><span style="<%= sidebarTextStyle(transactionsActive) %>">Transactions</span>
                             </a>
                         </li>
-                        <li class="">
-                            <a href="/categories">
-                                <i class="ti ti-user-star"></i><span>Categories</span>
+                        <li class="<%= categoriesActive ? 'active menu-item-current' : '' %>">
+                            <a href="/categories" class="<%= categoriesActive ? 'active menu-link-current' : '' %>" style="<%= sidebarLinkStyle(categoriesActive) %>">
+                                <i class="ti ti-tags" style="<%= sidebarIconStyle(categoriesActive) %>"></i><span style="<%= sidebarTextStyle(categoriesActive) %>">Categories</span>
                             </a>
                         </li>
 
-                        <li class="">
-                            <a href="/analytics">
-                                <i class="ti ti-layout-grid"></i><span>Analytics</span>
+                        <li class="<%= analyticsActive ? 'active menu-item-current' : '' %>">
+                            <a href="/analytics" class="<%= analyticsActive ? 'active menu-link-current' : '' %>" style="<%= sidebarLinkStyle(analyticsActive) %>">
+                                <i class="ti ti-chart-histogram" style="<%= sidebarIconStyle(analyticsActive) %>"></i><span style="<%= sidebarTextStyle(analyticsActive) %>">Analytics</span>
                             </a>
                         </li>
-                        <li class="">
-                            <a href="/wallet">
-                                <i class="ti ti-layout-grid"></i><span>Wallets</span>
+                        <li class="<%= walletActive ? 'active menu-item-current' : '' %>">
+                            <a href="/wallet" class="<%= walletActive ? 'active menu-link-current' : '' %>" style="<%= sidebarLinkStyle(walletActive) %>">
+                                <i class="ti ti-wallet" style="<%= sidebarIconStyle(walletActive) %>"></i><span style="<%= sidebarTextStyle(walletActive) %>">Wallets</span>
                             </a>
                         </li>
-                        <li class="">
-                            <a href="/reminders">
-                                <i class="ti ti-bell-ringing"></i><span>Reminders & Dues</span>
+                        <li class="<%= remindersActive ? 'active menu-item-current' : '' %>">
+                            <a href="/reminders" class="<%= remindersActive ? 'active menu-link-current' : '' %>" style="<%= sidebarLinkStyle(remindersActive) %>">
+                                <i class="ti ti-bell-ringing" style="<%= sidebarIconStyle(remindersActive) %>"></i><span style="<%= sidebarTextStyle(remindersActive) %>">Reminders & Dues</span>
                             </a>
                         </li>
-                        <li class="">
-                            <a href="/budget">
-                                <i class="ti ti-chart-donut-3"></i><span>Budget</span>
+                        <li class="<%= budgetActive ? 'active menu-item-current' : '' %>">
+                            <a href="/budget" class="<%= budgetActive ? 'active menu-link-current' : '' %>" style="<%= sidebarLinkStyle(budgetActive) %>">
+                                <i class="ti ti-chart-donut-3" style="<%= sidebarIconStyle(budgetActive) %>"></i><span style="<%= sidebarTextStyle(budgetActive) %>">Budget</span>
                             </a>
                         </li>
-                        <li class="">
-                            <a href="/settings">
-                                <i class="ti ti-layout-grid"></i><span>Settings</span>
+                        <li class="<%= settingsActive ? 'active menu-item-current' : '' %>">
+                            <a href="/settings" class="<%= settingsActive ? 'active menu-link-current' : '' %>" style="<%= sidebarLinkStyle(settingsActive) %>">
+                                <i class="ti ti-settings" style="<%= sidebarIconStyle(settingsActive) %>"></i><span style="<%= sidebarTextStyle(settingsActive) %>">Settings</span>
                             </a>
                         </li>
                     </ul>

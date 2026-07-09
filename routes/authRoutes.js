@@ -10,9 +10,11 @@ const {
 const {
     showAuthPage,
     authHandler,
-    showDashboard,
     logout,
 } = require("../controllers/authController");
+const {
+    showDashboard,
+} = require("../controllers/dashboardController");
 
 router.get("/", alreadyAuth, showAuthPage);
 

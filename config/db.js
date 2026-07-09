@@ -1,16 +1,14 @@
+require("dotenv").config();
 const { MongoClient } = require("mongodb");
 
-const uri = "mongodb://127.0.0.1:27017";
-
-const client = new MongoClient(uri);
-
+const client = new MongoClient(process.env.MONGO_URI);
 let db;
 
 async function connectDB() {
   try {
     if (!db) {
       await client.connect();
-
+       console.log("✅ MongoDB connected successfully.");
       db = client.db("expanceTracker");
     }
 

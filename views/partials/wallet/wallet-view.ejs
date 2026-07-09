@@ -1,0 +1,27 @@
+<div class="offcanvas offcanvas-end" tabindex="-1" id="walletView-<%= wallet._id %>">
+    <div class="offcanvas-header border-bottom">
+        <h5>Wallet Overview</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body">
+        <div class="text-center mb-4">
+            <h4><%= wallet.name %></h4>
+            <span class="badge <%= wallet.badgeClass %>"><%= wallet.typeLabel %> Wallet</span>
+            <h3 class="mt-3"><%= formatAmount(wallet.balance, wallet.currency) %></h3>
+        </div>
+
+        <div class="mb-3"><strong>Currency:</strong> <%= wallet.currency %></div>
+        <div class="mb-3"><strong>Opening Balance:</strong> <%= formatAmount(wallet.openingBalance, wallet.currency) %></div>
+        <div class="mb-3"><strong>Total Transactions:</strong> <%= wallet.transactionCount %></div>
+        <div class="mb-3"><strong>Total Transfers:</strong> <%= wallet.transferCount %></div>
+        <div class="mb-3"><strong>Income Added:</strong> <%= formatAmount(wallet.totalIncome, wallet.currency) %></div>
+        <div class="mb-3"><strong>Expense Spent:</strong> <%= formatAmount(wallet.totalExpense, wallet.currency) %></div>
+        <div class="mb-3"><strong>Incoming Transfers:</strong> <%= formatAmount(wallet.incomingTransfers, wallet.currency) %></div>
+        <div class="mb-3"><strong>Outgoing Transfers:</strong> <%= formatAmount(wallet.outgoingTransfers, wallet.currency) %></div>
+        <div class="mb-3"><strong>Last Activity:</strong> <%= formatDate(wallet.lastActivity) %></div>
+        <div class="mb-4">
+            <strong>Notes:</strong>
+            <p class="mb-0"><%= wallet.notes || "No notes added." %></p>
+        </div>
+    </div>
+</div>

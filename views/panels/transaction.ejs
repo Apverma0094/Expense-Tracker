@@ -1,0 +1,178 @@
+<%- include("../partials/header.ejs") %>
+
+    <%- include("../partials/sidebar.ejs") %>
+
+        <div class="content pb-0">
+
+            <div class="d-flex align-items-center justify-content-between gap-2 mb-4 flex-wrap">
+                <div>
+                    <h4 class="mb-1">Transactions<span class="badge badge-soft-primary ms-2"><%= transactions.length %></span></h4>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb mb-0 p-0">
+                            <li class="breadcrumb-item"><a href="/dashboard">Home</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Transactions</li>
+                        </ol>
+                    </nav>
+                </div>
+                <div class="gap-2 d-flex align-items-center flex-wrap">
+                    <a href="/transactions" class="btn btn-icon btn-outline-light shadow" data-bs-toggle="tooltip"
+                        data-bs-placement="top" aria-label="Refresh" data-bs-original-title="Refresh"><i
+                            class="ti ti-refresh"></i></a>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-4 col-xl-4 d-flex">
+                    <div class="card flex-fill border-0 rounded-0">
+                        <div class="card-body">
+                            <p class="text-muted mb-2">Total Income</p>
+                            <h4 class="mb-0 text-success"><%= formatAmount(meta.totalIncome) %></h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 col-xl-4 d-flex">
+                    <div class="card flex-fill border-0 rounded-0">
+                        <div class="card-body">
+                            <p class="text-muted mb-2">Total Expense</p>
+                            <h4 class="mb-0 text-danger"><%= formatAmount(meta.totalExpense) %></h4>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4 col-xl-4 d-flex">
+                    <div class="card flex-fill border-0 rounded-0">
+                        <div class="card-body">
+                            <p class="text-muted mb-2">Current Balance</p>
+                            <h4 class="mb-0 <%= meta.balance >= 0 ? "text-primary" : "text-danger" %>"><%= formatAmount(meta.balance) %></h4>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 rounded-0">
+                <div class="card-body">
+
+                    <form action="/transactions" method="get" class="page-filter-shell mb-4">
+                        <div class="page-filter-left">
+                            <div class="page-filter-group">
+                                <select class="form-select page-filter-field" name="type">
+                                    <option value="">All Types</option>
+                                    <option value="income" <%= filters.type === "income" ? "selected" : "" %>>Income</option>
+                                    <option value="expense" <%= filters.type === "expense" ? "selected" : "" %>>Expense</option>
+                                </select>
+                                <select class="form-select category-select-compact page-filter-field" name="category" data-transaction-filter-category>
+                                    <option value="">All Categories</option>
+                                <% categoryOptions.forEach((category) => { %>
+                                    <option
+                                        value="<%= category.name %>"
+                                        data-type="<%= category.type %>"
+                                        <%= filters.category === category.name ? "selected" : "" %>>
+                                        <%= category.optionLabel %>
+                                    </option>
+                                <% }) %>
+                            </select>
+
+                                <select class="form-select page-filter-field" name="wallet">
+                                    <option value="">All Wallets</option>
+                                    <% meta.wallets.forEach((wallet) => { %>
+                                        <option value="<%= wallet %>" <%= filters.wallet === wallet ? "selected" : "" %>><%= wallet %></option>
+                                    <% }) %>
+                                </select>
+                            </div>
+
+                            <div class="page-filter-actions">
+                                <input type="text" class="form-control page-filter-search" name="search" value="<%= filters.search %>"
+                                    placeholder="Search transactions...">
+                                <button type="submit" class="btn btn-outline-light shadow">Filter</button>
+                                <a href="/transactions" class="btn btn-outline-light shadow">Clear</a>
+                            </div>
+                        </div>
+
+                        <div class="page-filter-cta">
+                            <button type="button" class="btn btn-primary" data-bs-toggle="offcanvas"
+                                data-bs-target="#addTransaction">
+                                + Add Transaction
+                            </button>
+                        </div>
+                    </form>
+
+                    <div class="table-responsive table-nowrap custom-table">
+                        <table class="table table-nowrap" id="transactionsTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="no-sort">
+                                        <div class="form-check form-check-md">
+                                            <input class="form-check-input" type="checkbox" id="select-all">
+                                        </div>
+                                    </th>
+                                    <th>Title</th>
+                                    <th>Category</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
+                                    <th>Date</th>
+                                    <th>Wallet</th>
+                                    <th class="no-sort">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <% if (!transactions.length) { %>
+                                    <tr>
+                                        <td colspan="8" class="text-center py-5 text-muted">
+                                            No transactions found. Add your first transaction to get started.
+                                        </td>
+                                    </tr>
+                                <% } %>
+
+                                <% transactions.forEach((transaction) => { %>
+                                    <tr>
+                                        <td>
+                                            <div class="form-check form-check-md">
+                                                <input class="form-check-input" type="checkbox">
+                                            </div>
+                                        </td>
+                                        <td><%= transaction.title %></td>
+                                        <td><%= transaction.category %></td>
+                                        <td>
+                                            <span class="badge <%= transaction.type === "income" ? "bg-success-subtle text-success" : "bg-danger-subtle text-danger" %>">
+                                                <%= transaction.type === "income" ? "Income" : "Expense" %>
+                                            </span>
+                                        </td>
+                                        <td><%= formatAmount(transaction.amount) %></td>
+                                        <td><%= formatDate(transaction.transactionDate) %></td>
+                                        <td><%= transaction.wallet %></td>
+                                        <td>
+                                            <div class="d-flex gap-2">
+                                                <button class="btn btn-sm btn-light" data-bs-toggle="offcanvas"
+                                                    data-bs-target="#editTransaction-<%= transaction._id %>">
+                                                    <i class="ti ti-edit"></i>
+                                                </button>
+
+                                                <form action="/transactions/<%= transaction._id %>/delete" method="post" class="m-0">
+                                                    <button class="btn btn-sm btn-light text-danger" type="submit"
+                                                        onclick="return confirm('Delete this transaction?')">
+                                                        <i class="ti ti-trash"></i>
+                                                    </button>
+                                                </form>
+
+                                                <button class="btn btn-sm btn-light" data-bs-toggle="offcanvas"
+                                                    data-bs-target="#transactionView-<%= transaction._id %>">
+                                                    <i class="ti ti-eye"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <% }) %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <% transactions.forEach((transaction) => { %>
+            <%- include("../partials/transactions/transaction-view.ejs", { transaction }) %>
+            <%- include("../partials/transactions/transaction-edit.ejs", { transaction }) %>
+        <% }) %>
+
+        <%- include("../partials/transactions/transaction-add.ejs", { addTransactionState }) %>
+
+        <%- include("../partials/footer.ejs")%>

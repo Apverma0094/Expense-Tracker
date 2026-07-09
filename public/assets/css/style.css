@@ -995,12 +995,38 @@ Author URL: https://themeforest.net/user/dreamstechnologies
   background: var(--menu-item-active-bg);
   color: var(--primary);
 }
+.sidebar .sidebar-menu > ul > li > ul > li > a.active {
+  background: var(--menu-item-active-bg);
+  color: var(--primary);
+}
 .sidebar .sidebar-menu > ul > li > ul > li > a:hover i {
+  color: #fff;
+  background-color: var(--primary);
+}
+.sidebar .sidebar-menu > ul > li > ul > li > a.active i {
   color: #fff;
   background-color: var(--primary);
 }
 .sidebar .sidebar-menu > ul > li > ul > li > a:hover .menu-arrow::before {
   border-color: var(--white);
+}
+.sidebar .sidebar-menu > ul > li > ul > li > a.active .menu-arrow::before {
+  border-color: var(--white);
+}
+.sidebar .sidebar-menu > ul > li > ul > li.menu-item-current > a,
+.sidebar .sidebar-menu > ul > li > ul > li > a.menu-link-current {
+  background: var(--menu-item-active-bg) !important;
+  border-radius: 6px;
+  color: var(--primary) !important;
+}
+.sidebar .sidebar-menu > ul > li > ul > li.menu-item-current > a span,
+.sidebar .sidebar-menu > ul > li > ul > li > a.menu-link-current span {
+  color: var(--primary) !important;
+}
+.sidebar .sidebar-menu > ul > li > ul > li.menu-item-current > a i,
+.sidebar .sidebar-menu > ul > li > ul > li > a.menu-link-current i {
+  color: #fff !important;
+  background-color: var(--primary) !important;
 }
 .sidebar .sidebar-menu > ul > li:last-child ul {
   margin-bottom: 0;

@@ -219,8 +219,10 @@ async function showBudgetPage(req, res) {
         }, {});
         const historyRows = buildBudgetHistoryRows(lastSixMonthKeys, allBudgets, transactionsByMonth);
 
-        return res.render("budget/budget", {
+        return res.render("panels/budget", {
             filters,
+            pageStyles: ["assets2/css/budget.css"],
+            pageScripts: ["assets2/js/budget.js"],
             summary: {
                 periodType: filters.periodType,
                 periodLabel: getBudgetPeriodLabel({
@@ -254,6 +256,11 @@ async function showBudgetPage(req, res) {
             alertRows,
             historyRows,
             monthlyBudgetFallback: settings.preferences.monthlyBudgetLimit || 0,
+            chartData: {
+                labels: historyRows.map((item) => item.label),
+                budgetValues: historyRows.map((item) => Number(item.overallLimit || 0)),
+                spentValues: historyRows.map((item) => Number(item.spent || 0)),
+            },
         });
     } catch (error) {
         console.error(error);

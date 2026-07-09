@@ -28,6 +28,15 @@ const {
     buildReminderSummary,
     buildReminderAlertItems,
 } = require("./utils/reminderPresentation");
+const {
+    formatAmount,
+    formatDate,
+    formatInputDate,
+    formatDownloadName,
+    typeBadgeClass,
+    typeLabel,
+    budgetStatusBadgeClass,
+} = require("./utils/viewHelpers");
 
 const app = express();
 
@@ -65,8 +74,35 @@ app.use(
 app.use(flash());
 
 app.use((req, res, next) => {
-    res.locals.success_msg = req.flash("success_msg");
-    res.locals.error_msg = req.flash("error_msg");
+    const successMessages = req.flash("success_msg");
+    const errorMessages = req.flash("error_msg");
+    const currentPath = (req.originalUrl || req.path || "/").split("?")[0];
+
+    res.locals.success_msg = successMessages;
+    res.locals.error_msg = errorMessages;
+    res.locals.currentPath = currentPath;
+    res.locals.pageStyles = [];
+    res.locals.pageScripts = [];
+    res.locals.formatAmount = formatAmount;
+    res.locals.formatDate = formatDate;
+    res.locals.formatInputDate = formatInputDate;
+    res.locals.formatDownloadName = formatDownloadName;
+    res.locals.typeBadgeClass = typeBadgeClass;
+    res.locals.typeLabel = typeLabel;
+    res.locals.budgetStatusBadgeClass = budgetStatusBadgeClass;
+    res.locals.isActiveRoute = (route) => currentPath === route || currentPath.startsWith(`${route}/`);
+    res.locals.toastMessages = [
+        ...successMessages.map((message) => ({
+            type: "success",
+            title: "Success",
+            message,
+        })),
+        ...errorMessages.map((message) => ({
+            type: "error",
+            title: "Error",
+            message,
+        })),
+    ];
 
     next();
 });

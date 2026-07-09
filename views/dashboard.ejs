@@ -1,91 +1,5 @@
-<%
-function formatAmount(amount) {
-    return "Rs. " + Number(amount || 0).toLocaleString("en-IN", {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    });
-}
-
-function reminderBadgeClass(status) {
-    if (status === "overdue") {
-        return "bg-danger-subtle text-danger";
-    }
-
-    if (status === "due-today") {
-        return "bg-warning-subtle text-warning";
-    }
-
-    return "bg-primary-subtle text-primary";
-}
-
-function reminderPriorityClass(priority) {
-    if (priority === "high") {
-        return "bg-danger-subtle text-danger";
-    }
-
-    if (priority === "low") {
-        return "bg-success-subtle text-success";
-    }
-
-    return "bg-warning-subtle text-warning";
-}
-
-const monthLabels = monthOverview.map((item) => item.label);
-const monthIncome = monthOverview.map((item) => Number(item.income || 0));
-const monthExpense = monthOverview.map((item) => Number(item.expense || 0));
-const monthBalance = monthOverview.map((item) => Number(item.balance || 0));
-const categoryLabels = categoryBreakdown.map((item) => item.category);
-const categoryValues = categoryBreakdown.map((item) => Number(item.amount || 0));
-const walletLabels = walletBalances.map((item) => item.name);
-const walletValues = walletBalances.map((item) => Number(item.balance || 0));
-const monthCapacity = monthOverview.map((item) => Math.max(
-    Number(item.income || 0),
-    Number(item.expense || 0),
-    Number(budgetTarget || 0)
-));
-const monthCapacityRemainder = monthCapacity.map((value, index) => Math.max(value - monthExpense[index], 0));
-const monthSavingsRate = monthOverview.map((item) => (
-    Number(item.income || 0) > 0
-        ? Number((((item.income - item.expense) / item.income) * 100).toFixed(2))
-        : 0
-));
-const monthBudgetUseTrend = monthOverview.map((item) => (
-    Number(budgetTarget || 0) > 0
-        ? Number(Math.min(((Number(item.expense || 0) / Number(budgetTarget || 0)) * 100), 100).toFixed(2))
-        : 0
-));
-const monthBudgetLeftTrend = monthBudgetUseTrend.map((value) => Number((100 - value).toFixed(2)));
-const totalCategoryAmount = categoryValues.reduce((sum, value) => sum + value, 0);
-const totalWalletBalance = walletValues.reduce((sum, value) => sum + value, 0);
-const topCategory = categoryBreakdown[0] || null;
-const bestBalanceMonth = monthOverview.reduce((best, month) => (
-    !best || Number(month.balance || 0) > Number(best.balance || 0) ? month : best
-), null);
-const reminderPayProgress = reminderSummary.moneyToPay > 0
-    ? Math.min((reminderSummary.overdue / Math.max(reminderSummary.totalActive, 1)) * 100, 100)
-    : 0;
-%>
-
 <%- include("partials/header.ejs") %>
     <%- include("partials/sidebar.ejs") %>
-
-        <style>
-            .dashboard-budget-card #retained-chart,
-            .dashboard-budget-card #churned-chart {
-                min-width: 0;
-                width: 100%;
-                max-width: 110px;
-            }
-
-            .dashboard-budget-card .budget-stat-copy {
-                min-width: 0;
-                flex-shrink: 0;
-            }
-
-            .dashboard-budget-card .budget-meta-note {
-                word-break: break-word;
-            }
-        </style>
 
         <div class="content pb-0">
 
@@ -111,7 +25,7 @@ const reminderPayProgress = reminderSummary.moneyToPay > 0
                             <div class="card growth-card flex-fill bg-soft-success border-0 shadow-none">
                                 <div class="card-header text-center border-0 py-3">
                                     <div class="avatar rounded avatar-md bg-success">
-                                        <img src="assets/img/icons/carbon_growth.svg" alt="icon" class="img-fluid p-2">
+                                        <i class="ti ti-cash-banknote fs-24 text-white"></i>
                                     </div>
                                 </div>
                                 <div class="card-body bg-white rounded border mb-1 p-3">
@@ -126,7 +40,7 @@ const reminderPayProgress = reminderSummary.moneyToPay > 0
                             <div class="card growth-card flex-fill bg-soft-danger border-0 shadow-none">
                                 <div class="card-header text-center border-0 py-3">
                                     <div class="avatar rounded avatar-md bg-danger">
-                                        <img src="assets/img/icons/hand-icon.svg" alt="icon" class="img-fluid p-2">
+                                        <i class="ti ti-credit-card-pay fs-24 text-white"></i>
                                     </div>
                                 </div>
                                 <div class="card-body bg-white rounded border mb-1 p-3">
@@ -141,7 +55,7 @@ const reminderPayProgress = reminderSummary.moneyToPay > 0
                             <div class="card growth-card flex-fill bg-purple-subtle border-0 shadow-none">
                                 <div class="card-header text-center border-0 py-3">
                                     <div class="avatar rounded avatar-md bg-purple">
-                                        <img src="assets/img/icons/users.svg" alt="icon" class="img-fluid p-2">
+                                        <i class="ti ti-wallet fs-24 text-white"></i>
                                     </div>
                                 </div>
                                 <div class="card-body bg-white rounded border mb-1 p-3">
@@ -156,7 +70,7 @@ const reminderPayProgress = reminderSummary.moneyToPay > 0
                             <div class="card growth-card flex-fill bg-soft-warning border-0 shadow-none">
                                 <div class="card-header text-center border-0 py-3">
                                     <div class="avatar rounded avatar-md bg-warning">
-                                        <img src="assets/img/icons/fluent_arrow.svg" alt="icon" class="img-fluid p-2">
+                                        <i class="ti ti-chart-bar fs-24 text-white"></i>
                                     </div>
                                 </div>
                                 <div class="card-body bg-white rounded border mb-1 p-3">
@@ -304,7 +218,14 @@ const reminderPayProgress = reminderSummary.moneyToPay > 0
                                     <span class="fw-semibold"><%= reminderSummary.totalActive ? `${Math.round((reminderSummary.overdue / reminderSummary.totalActive) * 100)}%` : "0%" %></span>
                                 </div>
                                 <div class="progress progress-sm">
-                                    <div class="progress-bar bg-danger" role="progressbar" style="width: <%= reminderPayProgress %>%"></div>
+                                    <div
+                                        class="progress-bar bg-danger js-reminder-pay-progress"
+                                        role="progressbar"
+                                        data-progress="<%= reminderPayProgress %>"
+                                        aria-valuemin="0"
+                                        aria-valuemax="100"
+                                        aria-valuenow="<%= reminderPayProgress %>"
+                                    ></div>
                                 </div>
                             </div>
                         </div>
@@ -352,7 +273,11 @@ const reminderPayProgress = reminderSummary.moneyToPay > 0
                                 <div>
                                     <div class="mb-0 fs-18 fw-bold text-dark">Upcoming Reminder Alerts</div>
                                     <small class="text-muted">
-                                        <%= reminderAlerts.length ? "Most urgent upcoming items from Reminders & Dues" : "Add reminders to surface alerts here" %>
+                                        <% if (reminderAlerts.length) { %>
+                                            Most urgent upcoming items from Reminders &amp; Dues
+                                        <% } else { %>
+                                            Add reminders to surface alerts here
+                                        <% } %>
                                     </small>
                                 </div>
                                 <a href="/reminders" class="btn btn-sm btn-outline-light">View All</a>
@@ -437,17 +362,21 @@ const reminderPayProgress = reminderSummary.moneyToPay > 0
                                         <% } %>
 
                                         <% monthOverview.forEach((month) => { %>
-                                            <% const budgetPercent = budgetTarget > 0 ? Math.min((month.expense / budgetTarget) * 100, 100) : 0; %>
+                                            <% const hasBudgetTarget = Number(budgetTarget || 0) > 0; %>
+                                            <% const rawBudgetPercent = hasBudgetTarget ? ((month.expense / budgetTarget) * 100) : 0; %>
+                                            <% const budgetPercent = hasBudgetTarget ? Math.min(rawBudgetPercent, 100) : 0; %>
+                                            <% const budgetStatus = !hasBudgetTarget ? "No Budget" : month.expense > budgetTarget ? "Over Budget" : rawBudgetPercent >= 80 ? "At Risk" : "On Track"; %>
+                                            <% const budgetStatusClass = budgetStatus === "Over Budget" ? "bg-danger-subtle text-danger" : budgetStatus === "At Risk" ? "bg-warning-subtle text-warning" : budgetStatus === "On Track" ? "bg-success-subtle text-success" : "bg-light text-dark"; %>
                                             <tr>
                                                 <td><%= month.label %></td>
                                                 <td class="text-success"><%= formatAmount(month.income) %></td>
                                                 <td class="text-danger"><%= formatAmount(month.expense) %></td>
                                                 <td class="<%= month.balance >= 0 ? "text-primary" : "text-danger" %>"><%= formatAmount(month.balance) %></td>
                                                 <td><%= month.topCategory %></td>
-                                                <td><%= budgetPercent.toFixed(0) %>%</td>
+                                                <td><%= hasBudgetTarget ? `${budgetPercent.toFixed(0)}%` : "-" %></td>
                                                 <td>
-                                                    <span class="badge <%= month.expense <= budgetTarget ? "bg-success-subtle text-success" : "bg-danger-subtle text-danger" %>">
-                                                        <%= month.expense <= budgetTarget ? "On Track" : "Over Budget" %>
+                                                    <span class="badge <%= budgetStatusClass %>">
+                                                        <%= budgetStatus %>
                                                     </span>
                                                 </td>
                                             </tr>
@@ -465,236 +394,17 @@ const reminderPayProgress = reminderSummary.moneyToPay > 0
 
         <script id="dashboard-chart-data" type="application/json">
             <%- JSON.stringify({
-                monthLabels,
-                monthIncome,
-                monthExpense,
-                monthBalance,
-                monthSavingsRate,
-                monthBudgetLeftTrend,
-                monthBudgetUseTrend,
-                monthCapacityRemainder,
-                categoryLabels: categoryLabels.length ? categoryLabels : ["No Data"],
-                categoryValues: categoryValues.length ? categoryValues : [1],
-                categoryTotalLabel: totalCategoryAmount > 0 ? "100%" : "0%",
-                walletLabels: walletLabels.length ? walletLabels : ["No Wallets"],
-                walletValues: walletValues.length ? walletValues : [0],
+                ...chartData,
                 budgetLeftPercent: Number(budgetLeftPercent.toFixed(0)),
                 budgetUsedPercent: Number(budgetUsedPercent.toFixed(0)),
             }) %>
         </script>
 
         <script>
-            window.addEventListener("load", function () {
-                if (typeof ApexCharts === "undefined") {
-                    return;
-                }
-
-                const chartDataEl = document.querySelector("#dashboard-chart-data");
-                if (!chartDataEl) {
-                    return;
-                }
-
-                const chartData = JSON.parse(chartDataEl.textContent);
-                const borderColor = "#e9ecef";
-                const textMuted = "#6c757d";
-
-                const budgetLeftChartEl = document.querySelector("#retained-chart");
-                if (budgetLeftChartEl) {
-                    new ApexCharts(budgetLeftChartEl, {
-                        chart: { type: "line", height: 72, sparkline: { enabled: true }, toolbar: { show: false } },
-                        series: [{ data: chartData.monthBudgetLeftTrend }],
-                        colors: ["#22c55e"],
-                        stroke: { width: 3, curve: "smooth" },
-                        markers: { size: 0 },
-                        tooltip: { enabled: false }
-                    }).render();
-                }
-
-                const budgetUsedChartEl = document.querySelector("#churned-chart");
-                if (budgetUsedChartEl) {
-                    new ApexCharts(budgetUsedChartEl, {
-                        chart: { type: "line", height: 72, sparkline: { enabled: true }, toolbar: { show: false } },
-                        series: [{ data: chartData.monthBudgetUseTrend }],
-                        colors: ["#ef4444"],
-                        stroke: { width: 3, curve: "smooth" },
-                        markers: { size: 0 },
-                        tooltip: { enabled: false }
-                    }).render();
-                }
-
-                const miniCharts = [
-                    { selector: "#income-mini-chart", data: chartData.monthIncome, color: "#198754" },
-                    { selector: "#expense-mini-chart", data: chartData.monthExpense, color: "#dc3545" },
-                    { selector: "#balance-mini-chart", data: chartData.monthBalance, color: "#0d6efd" },
-                    { selector: "#savings-mini-chart", data: chartData.monthSavingsRate, color: "#ffc107" }
-                ];
-
-                miniCharts.forEach((item) => {
-                    const element = document.querySelector(item.selector);
-                    if (!element) {
-                        return;
-                    }
-
-                    new ApexCharts(element, {
-                        chart: {
-                            type: "area",
-                            height: 60,
-                            sparkline: { enabled: true }
-                        },
-                        series: [{ data: item.data }],
-                        colors: [item.color],
-                        stroke: { curve: "smooth", width: 2.5 },
-                        fill: {
-                            type: "gradient",
-                            gradient: {
-                                shadeIntensity: 0.25,
-                                opacityFrom: 0.35,
-                                opacityTo: 0.05
-                            }
-                        },
-                        tooltip: { enabled: false }
-                    }).render();
-                });
-
-                const cashFlowEl = document.querySelector("#revenue-chart2");
-                if (cashFlowEl) {
-                    new ApexCharts(cashFlowEl, {
-                        chart: { type: "bar", height: 300, stacked: true, toolbar: { show: false } },
-                        series: [
-                            { name: "Spent", data: chartData.monthExpense },
-                            { name: "Capacity", data: chartData.monthCapacityRemainder }
-                        ],
-                        colors: ["#f43f5e", "#e5e7eb"],
-                        dataLabels: { enabled: false },
-                        plotOptions: {
-                            bar: {
-                                columnWidth: "70%",
-                                borderRadius: 8,
-                                borderRadiusApplication: "end"
-                            }
-                        },
-                        stroke: { width: 0 },
-                        xaxis: {
-                            categories: chartData.monthLabels,
-                            labels: { style: { colors: textMuted } },
-                            axisBorder: { color: borderColor },
-                            axisTicks: { color: borderColor }
-                        },
-                        yaxis: {
-                            labels: {
-                                style: { colors: textMuted },
-                                formatter: (value) => "Rs. " + Number(value || 0).toLocaleString("en-IN")
-                            }
-                        },
-                        grid: { borderColor },
-                        legend: { show: false }
-                    }).render();
-                }
-
-                const categoryEl = document.querySelector("#region-wise-growth");
-                if (categoryEl) {
-                    new ApexCharts(categoryEl, {
-                        chart: { type: "donut", height: 300 },
-                        labels: chartData.categoryLabels,
-                        series: chartData.categoryValues,
-                        colors: ["#5b6ee1", "#61c28b", "#fbad42", "#31b0c8", "#8a6fd9", "#f43f5e", "#22c55e"],
-                        dataLabels: { enabled: false },
-                        legend: { position: "bottom" },
-                        plotOptions: {
-                            pie: {
-                                donut: {
-                                    size: "64%",
-                                    labels: {
-                                        show: true,
-                                        total: {
-                                            show: true,
-                                            label: "Total",
-                                            formatter: () => chartData.categoryTotalLabel
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }).render();
-                }
-
-                const trendEl = document.querySelector("#growth-trend");
-                if (trendEl) {
-                    new ApexCharts(trendEl, {
-                        chart: { height: 320, type: "line", toolbar: { show: false } },
-                        series: [
-                            { name: "Income", data: chartData.monthIncome },
-                            { name: "Expense", data: chartData.monthExpense },
-                            { name: "Balance", data: chartData.monthBalance }
-                        ],
-                        colors: ["#22c55e", "#f43f5e", "#6366f1"],
-                        stroke: { width: 3, curve: "smooth" },
-                        dataLabels: { enabled: false },
-                        fill: {
-                            type: "gradient",
-                            gradient: {
-                                shadeIntensity: 0.2,
-                                opacityFrom: 0.25,
-                                opacityTo: 0.02
-                            }
-                        },
-                        xaxis: {
-                            categories: chartData.monthLabels,
-                            labels: { style: { colors: textMuted } },
-                            axisBorder: { color: borderColor },
-                            axisTicks: { color: borderColor }
-                        },
-                        yaxis: {
-                            labels: {
-                                style: { colors: textMuted },
-                                formatter: (value) => "Rs. " + Number(value || 0).toLocaleString("en-IN")
-                            }
-                        },
-                        grid: { borderColor },
-                        legend: { position: "top" }
-                    }).render();
-                }
-
-                const walletOverviewEl = document.querySelector("#wallet-balance-overview");
-                if (walletOverviewEl) {
-                    new ApexCharts(walletOverviewEl, {
-                        chart: { type: "bar", height: 320, toolbar: { show: false } },
-                        series: [
-                            { name: "Balance", data: chartData.walletValues }
-                        ],
-                        colors: ["#6366f1"],
-                        plotOptions: {
-                            bar: {
-                                horizontal: true,
-                                borderRadius: 6,
-                                barHeight: "52%"
-                            }
-                        },
-                        dataLabels: { enabled: false },
-                        xaxis: {
-                            categories: chartData.walletLabels,
-                            labels: {
-                                style: { colors: textMuted },
-                                formatter: (value) => "Rs. " + Number(value || 0).toLocaleString("en-IN")
-                            },
-                            axisBorder: { color: borderColor },
-                            axisTicks: { color: borderColor }
-                        },
-                        yaxis: {
-                            labels: { style: { colors: textMuted } }
-                        },
-                        tooltip: {
-                            y: {
-                                formatter: (value) => "Rs. " + Number(value || 0).toLocaleString("en-IN", {
-                                    minimumFractionDigits: 2,
-                                    maximumFractionDigits: 2
-                                })
-                            }
-                        },
-                        grid: { borderColor },
-                        legend: { show: false }
-                    }).render();
-                }
+            document.querySelectorAll(".js-reminder-pay-progress").forEach((element) => {
+                const value = Number(element.dataset.progress || 0);
+                const boundedValue = Math.max(0, Math.min(100, value));
+                element.style.width = `${boundedValue}%`;
             });
         </script>
 

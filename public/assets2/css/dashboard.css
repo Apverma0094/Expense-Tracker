@@ -1,0 +1,15 @@
+.dashboard-budget-card #retained-chart,
+.dashboard-budget-card #churned-chart {
+    min-width: 0;
+    width: 100%;
+    max-width: 110px;
+}
+
+.dashboard-budget-card .budget-stat-copy {
+    min-width: 0;
+    flex-shrink: 0;
+}
+
+.dashboard-budget-card .budget-meta-note {
+    word-break: break-word;
+}

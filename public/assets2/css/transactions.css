@@ -1,0 +1,99 @@
+.page-filter-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 16px;
+}
+
+.page-filter-left,
+.page-filter-group,
+.page-filter-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.page-filter-left {
+    min-width: 0;
+}
+
+.page-filter-cta {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.page-filter-field {
+    width: 150px;
+    min-width: 150px;
+}
+
+.page-filter-search {
+    width: 220px;
+}
+
+.category-select-compact {
+    min-width: 160px !important;
+    max-width: 190px;
+    font-size: 0.93rem;
+}
+
+.category-select-compact-wide {
+    font-size: 0.93rem;
+}
+
+.select2-container.category-select2 .select2-selection--single {
+    min-height: 38px;
+    padding-top: 4px;
+    font-size: 0.93rem;
+}
+
+.select2-container.category-select2 .select2-selection__rendered {
+    padding-right: 28px;
+    line-height: 28px !important;
+}
+
+.select2-container--default .select2-dropdown.category-select2-dropdown {
+    width: 220px !important;
+    min-width: 220px !important;
+    max-width: 220px !important;
+    font-size: 0.9rem;
+}
+
+.select2-container--default .select2-results > .select2-results__options.category-select2-results {
+    max-height: 180px;
+}
+
+.select2-container--default .category-select2-dropdown .select2-results__option {
+    padding: 6px 10px;
+    line-height: 1.25;
+}
+
+.category-select2-dropdown .select2-results__options {
+    max-height: 180px !important;
+}
+
+@media (max-width: 767.98px) {
+    .page-filter-shell,
+    .page-filter-left,
+    .page-filter-group,
+    .page-filter-actions {
+        display: flex;
+        align-items: stretch;
+        grid-template-columns: none;
+        flex-wrap: wrap;
+    }
+
+    .page-filter-cta {
+        justify-content: stretch;
+    }
+
+    .page-filter-field,
+    .page-filter-search,
+    .page-filter-cta .btn {
+        width: 100%;
+        min-width: 100%;
+    }
+}

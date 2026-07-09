@@ -195,11 +195,12 @@ async function showWalletPage(req, res) {
             currencies,
         };
 
-        return res.render("wallet/wallet", {
+        return res.render("panels/wallet", {
             wallets: walletList,
             walletOptions: allWalletsView,
             filters,
             meta,
+            pageStyles: ["assets2/css/wallet.css"],
         });
     } catch (error) {
         console.error(error);

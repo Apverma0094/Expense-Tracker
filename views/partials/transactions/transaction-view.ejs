@@ -1,0 +1,45 @@
+<div class="offcanvas offcanvas-end" tabindex="-1" id="transactionView-<%= transaction._id %>">
+    <div class="offcanvas-header border-bottom">
+        <h5>Transaction Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body">
+        <div class="text-center mb-4">
+            <h4><%= transaction.title %></h4>
+            <span class="badge <%= transaction.type === "income" ? "bg-success-subtle text-success" : "bg-danger-subtle text-danger" %>">
+                <%= transaction.type === "income" ? "Income" : "Expense" %>
+            </span>
+            <h3 class="mt-3"><%= formatAmount(transaction.amount) %></h3>
+        </div>
+
+        <div class="mb-3"><strong>Category:</strong> <%= transaction.category %></div>
+        <div class="mb-3"><strong>Wallet:</strong> <%= transaction.wallet %></div>
+        <div class="mb-3"><strong>Date:</strong> <%= formatDate(transaction.transactionDate) %></div>
+        <div class="mb-4">
+            <strong>Notes:</strong>
+            <p class="mb-0"><%= transaction.description || "No notes added." %></p>
+        </div>
+        <% if (transaction.billImageData) { %>
+            <div class="mb-3">
+                <strong class="d-block mb-2">Bill Image:</strong>
+                <img
+                    src="<%= transaction.billImageData %>"
+                    alt="Bill image"
+                    class="img-fluid rounded border"
+                    style="max-height: 280px; object-fit: contain;"
+                >
+            </div>
+            <a
+                href="<%= transaction.billImageData %>"
+                download="<%= formatDownloadName(transaction) %>"
+                class="btn btn-outline-primary w-100"
+            >
+                <i class="ti ti-download me-2"></i>Download Bill Image
+            </a>
+        <% } else { %>
+            <div class="border rounded p-3 text-muted text-center">
+                No bill image attached.
+            </div>
+        <% } %>
+    </div>
+</div>
