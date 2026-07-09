@@ -42,6 +42,58 @@ function getRemainingCooldownSeconds(otpSentAt, activeOTP) {
     return Math.max(sessionRemaining, activeOtpRemaining, 0);
 }
 
+function saveRequestSession(req) {
+    return new Promise((resolve, reject) => {
+        req.session.save((error) => {
+            if (error) {
+                reject(error);
+                return;
+            }
+
+            resolve();
+        });
+    });
+}
+
+function renderAuthPage(res, options = {}) {
+    const {
+        otpSent = false,
+        email = "",
+        otpSentAt = null,
+        successMessage = "",
+        errorMessage = "",
+    } = options;
+
+    if (successMessage) {
+        res.locals.toastMessages = [
+            ...(res.locals.toastMessages || []),
+            {
+                type: "success",
+                title: "Success",
+                message: successMessage,
+            },
+        ];
+    }
+
+    if (errorMessage) {
+        res.locals.toastMessages = [
+            ...(res.locals.toastMessages || []),
+            {
+                type: "error",
+                title: "Error",
+                message: errorMessage,
+            },
+        ];
+    }
+
+    return res.render("auth/login", {
+        otpSent,
+        email,
+        otpSentAt,
+        otpExpirySeconds: OTP_EXPIRY_SECONDS,
+    });
+}
+
 // AUTH PAGE
 async function showAuthPage(req, res) {
     try {
@@ -49,6 +101,7 @@ async function showAuthPage(req, res) {
         if (req.query.action === "changeEmail") {
             delete req.session.email;
             delete req.session.otpSentAt;
+            await saveRequestSession(req);
 
             return res.redirect("/");
         }
@@ -58,11 +111,10 @@ async function showAuthPage(req, res) {
             return res.redirect("/dashboard");
         }
 
-        return res.render("auth/login", {
+        return renderAuthPage(res, {
             otpSent: !!req.session.email,
             email: req.session.email || "",
             otpSentAt: req.session.otpSentAt || null,
-            otpExpirySeconds: OTP_EXPIRY_SECONDS,
         });
 
     } catch (error) {
@@ -165,12 +217,17 @@ async function sendOTP(req, res, options = {}) {
         );
 
         if (remainingSeconds > 0) {
-            req.flash(
-                "error_msg",
-                `OTP already sent. Please wait ${remainingSeconds}s before requesting a new one.`
-            );
-
-            return res.redirect("/");
+            req.session.email = email;
+            req.session.otpSentAt = activeOTP?.createdAt
+                ? new Date(activeOTP.createdAt).getTime()
+                : Date.now();
+            await saveRequestSession(req);
+            return renderAuthPage(res, {
+                otpSent: true,
+                email,
+                otpSentAt: req.session.otpSentAt,
+                errorMessage: `OTP already sent. Please wait ${remainingSeconds}s before requesting a new one.`,
+            });
         }
 
         const { otp, expiresAt } = generateOTP();
@@ -189,15 +246,15 @@ async function sendOTP(req, res, options = {}) {
         // Temporary OTP Session
         req.session.email = email;
         req.session.otpSentAt = Date.now();
-
-        req.flash(
-            "success_msg",
-            isResend
+        await saveRequestSession(req);
+        return renderAuthPage(res, {
+            otpSent: true,
+            email,
+            otpSentAt: req.session.otpSentAt,
+            successMessage: isResend
                 ? "OTP resent successfully"
-                : "OTP sent successfully"
-        );
-
-        return res.redirect("/");
+                : "OTP sent successfully",
+        });
 
     } catch (error) {
         console.error(
@@ -219,126 +276,135 @@ async function sendOTP(req, res, options = {}) {
 async function verifyOTP(req, res) {
     try {
         const { otp } = req.body;
+        const fallbackEmail = String(req.body.email || "").trim().toLowerCase();
 
         // Validate OTP Format
         if (!/^\d{6}$/.test(otp)) {
-            req.flash("error_msg", "Invalid OTP");
-            return res.redirect("/");
+            return renderAuthPage(res, {
+                otpSent: Boolean(req.session.email || fallbackEmail),
+                email: req.session.email || fallbackEmail,
+                otpSentAt: req.session.otpSentAt || null,
+                errorMessage: "Invalid OTP",
+            });
         }
 
-        const email = req.session.email;
+        const email = String(req.session.email || fallbackEmail || "").trim().toLowerCase();
+
+        if (!req.session.email && email) {
+            req.session.email = email;
+            await saveRequestSession(req);
+        }
 
         // OTP Session Exists?
         if (!email) {
-            req.flash("error_msg", "Please request an OTP first");
-            return res.redirect("/");
+            return renderAuthPage(res, {
+                otpSent: false,
+                email: "",
+                otpSentAt: null,
+                errorMessage: "Please request an OTP first",
+            });
         }
 
         // Find Latest OTP
         const latestOTP = await findLatestOTP(email);
 
-        // OTP Blocked
-        if (latestOTP && latestOTP.status === "blocked") {
-            req.flash(
-                "error_msg",
-                "Too many failed attempts. Please request a new OTP."
-            );
-            return res.redirect("/");
+        if (!latestOTP) {
+            return renderAuthPage(res, {
+                otpSent: false,
+                email: "",
+                otpSentAt: null,
+                errorMessage: "Please request an OTP first",
+            });
         }
 
-        const otpRecord = await findOTP(email, otp);
-        const activeOTP = await findActiveOTP(email);
-
-        // Invalid OTP
-        if (!otpRecord) {
-            if (
-                latestOTP &&
-                latestOTP.otp === otp &&
-                latestOTP.status === "sent" &&
-                latestOTP.expiresAt < new Date()
-            ) {
-                delete req.session.email;
-                delete req.session.otpSentAt;
-
-                req.flash("error_msg", "OTP Expired");
-                return res.redirect("/");
-            }
-
-            if (activeOTP) {
-                await incrementAttemptCount(activeOTP._id);
-
-                if (activeOTP.attemptCount + 1 >= 5) {
-                    await blockOTP(activeOTP._id);
-
-                    req.flash(
-                        "error_msg",
-                        "Too many failed attempts. Please request a new OTP."
-                    );
-
-                    return res.redirect("/");
-                }
-            }
-
-            req.flash("error_msg", "Invalid OTP");
-            return res.redirect("/");
+        // OTP Blocked
+        if (latestOTP.status === "blocked") {
+            return renderAuthPage(res, {
+                otpSent: true,
+                email,
+                otpSentAt: req.session.otpSentAt || null,
+                errorMessage: "Too many failed attempts. Please request a new OTP.",
+            });
         }
 
         // OTP Expired
-        if (otpRecord.expiresAt < new Date()) {
+        if (latestOTP.expiresAt < new Date()) {
             delete req.session.email;
             delete req.session.otpSentAt;
+            await saveRequestSession(req);
+            return renderAuthPage(res, {
+                otpSent: false,
+                email: "",
+                otpSentAt: null,
+                errorMessage: "OTP Expired",
+            });
+        }
 
-            req.flash("error_msg", "OTP Expired");
-            return res.redirect("/");
+        // Invalid OTP
+        if (String(latestOTP.otp) !== String(otp)) {
+            await incrementAttemptCount(latestOTP._id);
+
+            if (Number(latestOTP.attemptCount || 0) + 1 >= 5) {
+                await blockOTP(latestOTP._id);
+
+                return renderAuthPage(res, {
+                    otpSent: true,
+                    email,
+                    otpSentAt: req.session.otpSentAt || null,
+                    errorMessage: "Too many failed attempts. Please request a new OTP.",
+                });
+            }
+
+            return renderAuthPage(res, {
+                otpSent: true,
+                email,
+                otpSentAt: req.session.otpSentAt || null,
+                errorMessage: "Invalid OTP",
+            });
         }
 
         const user = await findOrCreateUserByEmail(email);
 
         // Mark OTP As Verified
-        await markOTPAsVerified(otpRecord._id);
+        await markOTPAsVerified(latestOTP._id);
 
         // Mark Email Lead As Verified
         await markEmailAsVerified(
             email
         );
 
-        // Create Fresh Session
-        await new Promise((resolve, reject) => {
-            req.session.regenerate((err) => {
-                if (err) return reject(err);
-                resolve();
-            });
-        });
-
         // Login User
-        req.session.userId = user._id;
+        req.session.userId = String(user._id);
         req.session.userEmail = user.email;
-
-        // Save Session
-        await new Promise((resolve, reject) => {
-            req.session.save((err) => {
-                if (err) return reject(err);
-                resolve();
-            });
-        });
+        console.log("LOGIN SESSION:", req.session.userId, req.session.userEmail);
+        delete req.session.email;
+        delete req.session.otpSentAt;
 
         // Save Login History
-        await saveSession({
-            sessionId: req.sessionID,
-            userId: user._id,
-            email: user.email,
-            ipAddress: req.ip,
-            userAgent: req.headers["user-agent"],
-        });
+        try {
+            await saveSession({
+                sessionId: req.sessionID,
+                userId: user._id,
+                email: user.email,
+                ipAddress: req.ip,
+                userAgent: req.headers["user-agent"],
+            });
+        } catch (sessionLogError) {
+            console.error("Login history save failed:", sessionLogError);
+        }
 
         req.flash("success_msg", "Logged in successfully");
+        await saveRequestSession(req);
         return res.redirect("/dashboard");
 
     } catch (error) {
         console.error("Verify OTP Error:", error);
-
-        req.flash("error_msg", "Server Error");
-        return res.redirect("/");
+        return renderAuthPage(res, {
+            otpSent: Boolean(req.session.email),
+            email: req.session.email || "",
+            otpSentAt: req.session.otpSentAt || null,
+            errorMessage: "Server Error",
+        });
     }
 }
 

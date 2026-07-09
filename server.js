@@ -39,6 +39,8 @@ const {
 } = require("./utils/viewHelpers");
 
 const app = express();
+const isProduction = process.env.NODE_ENV === "production";
+const isSecureCookieEnabled = isProduction && process.env.SESSION_COOKIE_SECURE === "true";
 
 // View Engine
 app.set("view engine", "ejs");
@@ -65,7 +67,7 @@ app.use(
             maxAge: 30 * 24 * 60 * 60 * 1000,
             httpOnly: true,
             sameSite: "lax",
-            secure: process.env.NODE_ENV === "production",
+            secure: isSecureCookieEnabled,
         },
     })
 );
