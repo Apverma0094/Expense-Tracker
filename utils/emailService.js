@@ -8,7 +8,9 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 async function sendOTPEmail(email, otp) {
   try {
-    await resend.emails.send({
+    console.log("Sending OTP to:", email);
+
+    const result = await resend.emails.send({
       from: "onboarding@resend.dev",
       to: email,
       subject: "Your OTP Code",
@@ -19,6 +21,9 @@ async function sendOTPEmail(email, otp) {
         <p>Valid for ${OTP_EXPIRY_SECONDS} seconds.</p>
       `,
     });
+
+    console.log("Resend Result:", result);
+
   } catch (error) {
     console.error("Error sending email:", error);
     throw error;
