@@ -2,46 +2,20 @@ const {
   OTP_EXPIRY_SECONDS,
 } = require("./otpConfig");
 
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
-  port: 587,
-  secure: false,
-  family: 4,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
+
+await resend.emails.send({
+  from: "onboarding@resend.dev",
+  to: email,
+  subject: "Your OTP Code",
+  html: `
+    <h2>Expense Tracker Login</h2>
+    <p>Your OTP is:</p>
+    <h1>${otp}</h1>
+    <p>Valid for ${OTP_EXPIRY_SECONDS} seconds.</p>
+  `,
 });
-
-async function sendOTPEmail(email, otp) {
-  try {
-    console.log("EMAIL_USER:", process.env.EMAIL_USER);
-    console.log("Starting email send...");
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-
-      to: email,
-
-      subject: "Your OTP Code",
-
-      html: `
-        <h2>Expense Tracker Login</h2>
-        <p>Your OTP is:</p>
-        <h1>${otp}</h1>
-        <p>Valid for ${OTP_EXPIRY_SECONDS} seconds.</p>
-      `,
-    });
-
-  } catch (error) {
-    console.error(
-      "Error sending email:",
-      error
-    );
-
-    throw error;
-  }
-}
 
 module.exports = sendOTPEmail;
