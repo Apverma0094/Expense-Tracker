@@ -1,20 +1,27 @@
-const {
-  OTP_EXPIRY_SECONDS,
-} = require("./otpConfig");
+const { OTP_EXPIRY_SECONDS } = require("./otpConfig");
+const SibApiV3Sdk = require("sib-api-v3-sdk");
 
-const { Resend } = require("resend");
+const client = SibApiV3Sdk.ApiClient.instance;
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const apiKey = client.authentications["api-key"];
+apiKey.apiKey = process.env.BREVO_API_KEY;
 
 async function sendOTPEmail(email, otp) {
   try {
-    console.log("Sending OTP to:", email);
+    const apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
 
-    const result = await resend.emails.send({
-      from: "onboarding@resend.dev",
-      to: email,
+    const result = await apiInstance.sendTransacEmail({
+      sender: {
+        email: "abhishekvermachirawa@gmail.com", // verified sender email
+        name: "Expense Tracker",
+      },
+      to: [
+        {
+          email: email,
+        },
+      ],
       subject: "Your OTP Code",
-      html: `
+      htmlContent: `
         <h2>Expense Tracker Login</h2>
         <p>Your OTP is:</p>
         <h1>${otp}</h1>
@@ -22,8 +29,7 @@ async function sendOTPEmail(email, otp) {
       `,
     });
 
-    console.log("Resend Result:", result);
-
+    console.log("Email sent:", result);
   } catch (error) {
     console.error("Error sending email:", error);
     throw error;
