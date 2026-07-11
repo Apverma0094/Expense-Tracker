@@ -5,6 +5,7 @@ const client = SibApiV3Sdk.ApiClient.instance;
 
 const apiKey = client.authentications["api-key"];
 apiKey.apiKey = process.env.BREVO_API_KEY;
+console.log("BREVO_API_KEY =", process.env.BREVO_API_KEY);
 
 async function sendOTPEmail(email, otp) {
   try {
